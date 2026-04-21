@@ -1,0 +1,14 @@
+[package]
+name        = "face-auth-models"
+version     = "0.1.0"
+edition     = "2021"
+description = "ONNX model loading and inference abstraction"
+
+[dependencies]
+face-auth-core = { path = "../face-auth-core" }
+ort            = { workspace = true }
+ndarray        = { workspace = true }
+image          = { workspace = true }
+nalgebra       = { workspace = true }
+thiserror      = { workspace = true }
+tracing        = { workspace = true }

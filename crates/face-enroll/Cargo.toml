@@ -1,0 +1,25 @@
+[package]
+name        = "face-enroll"
+version     = "0.1.0"
+edition     = "2021"
+description = "Face enrollment CLI"
+
+[[bin]]
+name = "face-enroll"
+path = "src/main.rs"
+
+[dependencies]
+face-auth-core     = { path = "../face-auth-core" }
+face-auth-models   = { path = "../face-auth-models" }
+face-auth-platform = { path = "../face-auth-platform" }
+libc               = { workspace = true }
+serde              = { workspace = true }
+bincode            = { workspace = true }
+thiserror          = { workspace = true }
+tracing            = { workspace = true }
+tracing-subscriber = { workspace = true }
+v4l                = "0.14"
+minifb             = "0.28"
+ratatui            = "0.29"
+crossterm          = "0.28"
+toml               = "0.8"

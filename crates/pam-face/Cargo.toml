@@ -1,0 +1,16 @@
+[package]
+name        = "pam-face"
+version     = "0.1.0"
+edition     = "2021"
+description = "PAM module for face authentication"
+
+[lib]
+crate-type = ["cdylib"]
+name       = "pam_face"
+
+[dependencies]
+face-auth-core = { path = "../face-auth-core" }
+serde          = { workspace = true }
+bincode        = { workspace = true }
+libc           = { workspace = true }
+thiserror      = { workspace = true }

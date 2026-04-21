@@ -1,0 +1,46 @@
+# Fedora Atomic OCI Containerfile for face-auth
+# Bakes face-auth into a custom Fedora Atomic image.
+#
+# Build:
+#   podman build -t localhost/fedora-atomic-face-auth -f packaging/Containerfile .
+#
+# Use with bootc or rpm-ostree:
+#   bootc switch --transport containers-storage localhost/fedora-atomic-face-auth
+
+FROM quay.io/fedora/fedora-bootc:43
+
+# Install dependencies
+RUN dnf install -y \
+    pam \
+    v4l-utils \
+    systemd \
+    && dnf clean all
+
+# Install face-auth binaries (built outside, copied in)
+# Assumes build artifacts are available at these paths.
+# For CI: run 'cargo build --release' first, then 'podman build ...'
+COPY target/release/face-authd  /usr/libexec/face-authd
+COPY target/release/face-enroll /usr/bin/face-enroll
+COPY target/release/libpam_face.so /usr/lib64/security/pam_face.so
+
+# Config
+COPY platform/config.toml /etc/face-auth/config.toml
+
+# Systemd service
+COPY platform/systemd/face-authd.service /usr/lib/systemd/system/face-authd.service
+
+# SELinux policy (must be compiled on target — included here for reference)
+# COPY platform/selinux/face_auth.pp /usr/share/selinux/packages/face_auth.pp
+
+# Enable service
+RUN systemctl enable face-authd.service
+
+# Models must be added separately (too large for image layers).
+# After first boot, run:
+#   bash /usr/share/face-auth/download-models.sh
+
+COPY scripts/download-models.sh /usr/share/face-auth/download-models.sh
+
+LABEL org.opencontainers.image.source="https://github.com/MrCodeEU/face-auth"
+LABEL org.opencontainers.image.description="Fedora Atomic with face-auth IR face authentication"
+LABEL org.opencontainers.image.licenses="Apache-2.0"

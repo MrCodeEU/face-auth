@@ -1,0 +1,142 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+env:
+  CARGO_TERM_COLOR: always
+  ORT_STRATEGY: download
+  RUST_BACKTRACE: 1
+
+jobs:
+  build:
+    name: Build release (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:43
+
+    strategy:
+      matrix:
+        target:
+          - x86_64-unknown-linux-gnu
+
+    steps:
+      - name: Install system dependencies
+        run: |
+          dnf install -y \
+            git curl gcc clang lld cmake pkg-config \
+            pam-devel kernel-headers libv4l-devel \
+            openssl-devel fontconfig-devel dbus-devel systemd-devel \
+            selinux-policy-devel checkpolicy policycoreutils \
+            policycoreutils-python-utils
+
+      - name: Install Rust
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: cargo-registry-
+
+      - name: Build release binaries
+        run: cargo build --release -p face-authd -p face-enroll
+
+      - name: Build PAM module
+        run: cargo build --release -p pam-face
+
+      - name: Stage release assets
+        run: |
+          RELEASE_DIR="release-staging"
+          mkdir -p "$RELEASE_DIR"
+          cp target/release/face-authd "$RELEASE_DIR/"
+          cp target/release/face-enroll "$RELEASE_DIR/"
+          cp target/release/libpam_face.so "$RELEASE_DIR/pam_face.so"
+          cp scripts/download-models.sh "$RELEASE_DIR/"
+          cp platform/config.toml "$RELEASE_DIR/"
+          cp platform/face-authd.service "$RELEASE_DIR/" 2>/dev/null || true
+
+          # Create tarball
+          TAG="${GITHUB_REF_NAME}"
+          ARCHIVE="face-auth-${TAG}-${{ matrix.target }}.tar.gz"
+          tar czf "$ARCHIVE" -C "$RELEASE_DIR" .
+          echo "ARCHIVE=$ARCHIVE" >> $GITHUB_ENV
+
+          # Checksums
+          sha256sum "$ARCHIVE" > SHA256SUMS
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.target }}
+          path: |
+            face-auth-*.tar.gz
+            SHA256SUMS
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          PREV_TAG=$(git tag --sort=-version:refname | grep -v "^${TAG}$" | head -1)
+          if [[ -n "$PREV_TAG" ]]; then
+            RANGE="${PREV_TAG}..${TAG}"
+          else
+            RANGE="HEAD"
+          fi
+          NOTES=$(git log "$RANGE" --pretty=format:"- %s (%h)" --no-merges)
+          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          echo "$NOTES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: face-auth ${{ github.ref_name }}
+          body: |
+            ## Changes
+
+            ${{ steps.changelog.outputs.notes }}
+
+            ## Installation
+
+            ```bash
+            tar xf face-auth-${{ github.ref_name }}-x86_64-unknown-linux-gnu.tar.gz
+            bash download-models.sh
+            sudo ./face-enroll --install
+            ```
+
+            See [README](https://github.com/MrCodeEU/face-auth#install) for full instructions.
+          files: |
+            face-auth-*.tar.gz
+            SHA256SUMS
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}

@@ -1,0 +1,57 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/face-auth-core",
+    "crates/face-authd",
+    "crates/pam-face",
+    "crates/face-enroll",
+    "crates/face-auth-platform",
+    "crates/face-auth-models",
+    "tests/phase0",
+]
+
+[workspace.dependencies]
+# IPC / serialization
+serde       = { version = "1", features = ["derive"] }
+bincode     = "1"
+
+# Async
+tokio       = { version = "1", features = ["full"] }
+
+# ML / vision
+ort         = "2.0.0-rc.12"
+nalgebra    = "~0.33"
+image       = "~0.25"
+ndarray     = "~0.17"
+
+# Platform
+libc        = "0.2"
+
+# Logging
+tracing             = "0.1"
+tracing-subscriber  = { version = "0.3", features = ["json", "env-filter"] }
+
+# Config
+config      = "~0.14"
+
+# Misc
+rand        = "~0.8"
+thiserror   = "1"
+
+[profile.release]
+opt-level   = 3
+lto         = true
+strip       = "symbols"
+
+# Optimize ML-heavy crates even in debug builds (huge speedup for ONNX pre/postprocessing)
+[profile.dev.package.face-auth-models]
+opt-level = 2
+
+[profile.dev.package.ndarray]
+opt-level = 2
+
+[profile.dev.package.nalgebra]
+opt-level = 2
+
+[profile.dev.package.ort]
+opt-level = 2

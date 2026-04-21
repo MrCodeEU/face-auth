@@ -1,0 +1,5 @@
+# face-auth Phase 2 test service — ISOLATED (no fallback)
+# Uses 'required' so we see pam_face.so's actual return code.
+# Full path needed on Fedora Atomic (immutable /usr)
+auth required /var/home/mrcode/Projekte/Rust/face_auth/target/debug/libpam_face.so
+account required pam_permit.so

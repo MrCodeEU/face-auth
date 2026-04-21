@@ -1,0 +1,51 @@
+# face-auth configuration
+# See: https://github.com/MrCodeEU/face-auth
+
+[platform]
+display_manager = "sddm"       # sddm | gdm | lightdm
+init_system     = "systemd"
+selinux         = true
+
+[daemon]
+socket_path       = "/run/face-auth/pam.sock"
+ui_socket_path    = "/run/face-auth/ui.sock"
+session_timeout_s = 7           # max seconds per auth attempt
+idle_unload_s     = 0           # unload models after N seconds idle (0 = disabled, keep loaded for fast sudo/lockscreen auth)
+max_concurrent    = 1           # one auth session at a time
+execution_provider = "cpu"      # "cpu", "rocm" (AMD GPU), "cuda" (NVIDIA), "xdna" (AMD NPU)
+
+[camera]
+device_path  = ""               # empty = auto-detect IR camera
+flush_frames = 0                # no flush — pipeline rejects bad frames naturally
+
+[recognition]
+model          = "arcface_r50"
+threshold      = 0.70           # cosine similarity (real ~0.85, phone ~0.66)
+frames_required = 2             # consecutive matches needed
+max_enrollment = 20             # max stored embeddings per user
+
+[liveness]
+enabled              = true
+lbp_entropy_min      = 5.5      # real face ~6.0-6.5, flat screens ~0-4.5
+local_contrast_cv_min = 0.20    # real face ~0.28-0.72
+local_contrast_cv_max = 0.80    # screens/photos often >0.8 or 0.0
+# ML model (only useful for RGB cameras, not IR)
+model_enabled     = false
+model             = "minifasnet_v2"
+model_threshold   = 0.5
+
+[geometry]
+distance_min       = 0.06       # face width ratio min (too far)
+distance_max       = 0.55       # face width ratio max (too close)
+yaw_max_deg        = 45.0
+pitch_max_deg      = 45.0
+roll_max_deg       = 35.0
+guidance_debounce_ms = 100      # ms between guidance state changes
+
+[logging]
+level = "info"                  # debug for troubleshooting, info for production
+# Override per-crate: RUST_LOG=face_authd=debug,ort=warn
+
+[notify]
+enabled     = false             # send desktop notification on successful auth
+timeout_ms  = 3000              # notification display duration (0 = server default)

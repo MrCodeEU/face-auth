@@ -1,0 +1,42 @@
+[package]
+name    = "phase0"
+version = "0.1.0"
+edition = "2021"
+
+# Phase 0 verification binaries — not shipped
+
+[[bin]]
+name = "test-camera"
+path = "src/test_camera.rs"
+
+[[bin]]
+name = "test-pam-stub"
+path = "src/test_pam_stub.rs"
+
+[[bin]]
+name = "test-onnx"
+path = "src/test_onnx.rs"
+
+[[bin]]
+name = "ir-discover"
+path = "src/ir_discover.rs"
+
+[[bin]]
+name = "test-video-access"
+path = "src/test_video_access.rs"
+
+[[bin]]
+name = "daemon-stub"
+path = "src/daemon_stub.rs"
+
+[[bin]]
+name = "test-pam-phase2"
+path = "src/test_pam_phase2.rs"
+
+[dependencies]
+face-auth-core = { path = "../../crates/face-auth-core" }
+ort     = { workspace = true }
+ndarray = { workspace = true }
+image   = { workspace = true }
+v4l     = "0.14"
+libc    = { workspace = true }

@@ -1,0 +1,6 @@
+# face-auth Phase 0.4 test service
+# Sends TEXT_INFO then permits auth (no password)
+auth optional pam_echo.so "face-auth: scanning face..."
+auth optional pam_echo.so "face-auth: match found"
+auth required pam_permit.so
+account required pam_permit.so

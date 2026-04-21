@@ -1,0 +1,10 @@
+[package]
+name        = "face-auth-platform"
+version     = "0.1.0"
+edition     = "2021"
+description = "Pluggable platform backends (DM, SELinux, systemd, etc.)"
+
+[dependencies]
+face-auth-core = { path = "../face-auth-core" }
+thiserror      = { workspace = true }
+libc           = { workspace = true }

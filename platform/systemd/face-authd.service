@@ -1,0 +1,31 @@
+[Unit]
+Description=Face Authentication Daemon
+After=local-fs.target
+Documentation=https://github.com/MrCodeEU/face-auth
+
+[Service]
+Type=notify
+ExecStart=/usr/libexec/face-authd
+RuntimeDirectory=face-auth
+RuntimeDirectoryMode=0755
+
+User=root
+SupplementaryGroups=video
+
+Restart=on-failure
+RestartSec=2s
+
+# Hardening
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full
+ProtectHome=read-only
+ReadWritePaths=/run/face-auth
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictRealtime=yes
+MemoryDenyWriteExecute=no
+
+[Install]
+WantedBy=multi-user.target
