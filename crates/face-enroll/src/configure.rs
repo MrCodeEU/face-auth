@@ -601,7 +601,7 @@ fn draw_table(f: &mut Frame, app: &mut App, area: ratatui::layout::Rect) {
 
             let val_str = field.val.display();
             let def_str = field.def.display();
-            let is_sel = i == selected;
+            let _is_sel = i == selected;
 
             let val_style = if field.modified() {
                 Style::default().fg(Color::Yellow)
@@ -626,11 +626,7 @@ fn draw_table(f: &mut Frame, app: &mut App, area: ratatui::layout::Rect) {
             .height(1)
             // Per-row selection style is applied via highlight_style below;
             // we only need the Cell styles for non-selected appearance.
-            .style(if is_sel {
-                Style::default()
-            } else {
-                Style::default()
-            })
+            .style(Style::default())
         })
         .collect();
 

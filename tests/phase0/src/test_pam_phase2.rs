@@ -112,7 +112,7 @@ unsafe extern "C" fn test_conv(
             }
             PAM_PROMPT_ECHO_OFF => {
                 println!("  [PROMPT] \"{msg_text}\"");
-                let empty = libc::strdup(b"\0".as_ptr() as *const c_char);
+                let empty = libc::strdup(c"".as_ptr());
                 (*responses.offset(i)).resp = empty;
             }
             other => {

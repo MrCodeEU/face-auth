@@ -104,7 +104,7 @@ unsafe extern "C" fn test_conv(
                 println!("  [PROMPT_ECHO_OFF] \"{msg_text}\"");
                 data.prompts_received.push(msg_text);
                 // Respond with empty string (no password needed for pam_permit)
-                let empty = libc::strdup(b"\0".as_ptr() as *const c_char);
+                let empty = libc::strdup(c"".as_ptr());
                 (*responses.offset(i)).resp = empty;
             }
             other => {

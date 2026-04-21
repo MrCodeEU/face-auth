@@ -165,6 +165,7 @@ async fn run_session_inner(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn detection_loop(
     camera: CameraHandle, // kept alive so capture thread runs
     inference: InferenceThread,
@@ -202,6 +203,7 @@ fn detection_loop(
     drop(inference);
 }
 
+#[allow(clippy::too_many_arguments)]
 fn detection_loop_inner(
     inference: &InferenceThread,
     geo_config: &face_auth_core::config::GeometryConfig,
@@ -279,10 +281,10 @@ fn detection_loop_inner(
                 // Require temporal liveness stability: ≥80% of last 10 frames must pass
                 let pass_count = liveness_history.iter().filter(|&&v| v).count();
                 let liveness_stable =
-                    liveness_history.len() >= 1 && pass_count * 100 / liveness_history.len() >= 80;
+                    !liveness_history.is_empty() && pass_count * 100 / liveness_history.len() >= 80;
 
                 if !liveness_stable {
-                    if liveness_history.len() >= 1 {
+                    if !liveness_history.is_empty() {
                         tracing::debug!(
                             session_id,
                             pass_count,

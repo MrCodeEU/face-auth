@@ -121,11 +121,7 @@ fn mean_brightness(fd: i32, stream: &mut Stream) -> Option<u8> {
             count += buf.len() as u64;
         }
     }
-    if count == 0 {
-        None
-    } else {
-        Some((total / count) as u8)
-    }
+    total.checked_div(count).map(|v| v as u8)
 }
 
 // ──────────────────────────────────────────────
@@ -165,7 +161,7 @@ fn patterns_for(len: usize, current: &[u8]) -> Vec<Vec<u8>> {
         out.push(vec![0x00, 0x00]);
         out.push(vec![0xFF, 0xFF]);
         let b1 = current.get(1).copied().unwrap_or(0);
-        let b0 = current.get(0).copied().unwrap_or(0);
+        let b0 = current.first().copied().unwrap_or(0);
         for v in 0u8..=255 {
             out.push(vec![v, b1]);
         }

@@ -254,6 +254,6 @@ mod tests {
         // We can't easily produce a true v1 bincode without the field,
         // but we can test that default_version() returns 1.
         assert_eq!(default_version(), 1);
-        assert!(ENROLLMENT_VERSION > 1, "current version must be > 1");
+        const _: () = assert!(ENROLLMENT_VERSION > 1, "current version must be > 1");
     }
 }

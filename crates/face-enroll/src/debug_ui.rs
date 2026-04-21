@@ -378,6 +378,7 @@ impl DebugWindow {
 
 // --- Drawing primitives ---
 
+#[allow(clippy::too_many_arguments)]
 fn draw_rect(
     buf: &mut [u32],
     buf_w: usize,
@@ -453,6 +454,7 @@ fn draw_filled_circle(
 }
 
 /// Draw a 112×112 grayscale image as a thumbnail at the given size.
+#[allow(clippy::too_many_arguments)]
 fn draw_gray_thumbnail(
     buf: &mut [u32],
     buf_w: usize,
@@ -495,7 +497,7 @@ fn draw_text(
     let mut cx = x;
     for ch in text.chars() {
         let idx = ch as usize;
-        if idx >= 32 && idx <= 126 {
+        if (32..=126).contains(&idx) {
             let glyph = &FONT_5X7[idx - 32];
             for (row, &bits) in glyph.iter().enumerate() {
                 for col in 0..5 {

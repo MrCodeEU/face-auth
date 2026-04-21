@@ -967,10 +967,8 @@ fn cmd_uninstall() {
                 if path.extension().is_some_and(|e| e == "bak") {
                     let service = path.file_stem().unwrap_or_default().to_string_lossy();
                     let pam_file = format!("/etc/pam.d/{service}");
-                    if Path::new(&pam_file).exists() {
-                        if std::fs::copy(&path, &pam_file).is_ok() {
-                            info_msg(&format!("Restored {pam_file} from backup"));
-                        }
+                    if Path::new(&pam_file).exists() && std::fs::copy(&path, &pam_file).is_ok() {
+                        info_msg(&format!("Restored {pam_file} from backup"));
                     }
                 }
             }
@@ -1062,9 +1060,11 @@ const SKIP_SERVICES: &[&str] = &[
     "systemd-user",
 ];
 
+type PamTemplateFn = fn(&str) -> String;
+
 /// Recommended PAM services that may not exist yet and can be created from a template.
 /// Each entry: (service_name, fn(pam_line) -> file_content)
-const CREATABLE_SERVICES: &[(&str, fn(&str) -> String)] = &[("polkit-1", |pam_line| {
+const CREATABLE_SERVICES: &[(&str, PamTemplateFn)] = &[("polkit-1", |pam_line| {
     format!(
         "#%PAM-1.0\n\
              # Created by face-auth installer\n\
@@ -1204,10 +1204,8 @@ fn configure_pam_services(pam_line: &str, backup_dir: &str) {
         let backup = format!("{backup_dir}/{filename}.bak");
 
         // Backup original
-        if !Path::new(&backup).exists() {
-            if std::fs::copy(pam_file, &backup).is_ok() {
-                info_msg(&format!("Backed up {pam_file} → {backup}"));
-            }
+        if !Path::new(&backup).exists() && std::fs::copy(pam_file, &backup).is_ok() {
+            info_msg(&format!("Backed up {pam_file} → {backup}"));
         }
 
         // Read content and insert before first auth line
@@ -1918,7 +1916,7 @@ fn cmd_enroll_debug(username: &str) {
                         // red flash
                     }
                 }
-            } else if !aligned_crop.is_some() {
+            } else if aligned_crop.is_none() {
                 // Show crops even when not capturing
                 let aligned = align_face(&frame.data, frame.width, frame.height, &det.landmarks);
                 aligned_crop = Some(aligned.data.clone());

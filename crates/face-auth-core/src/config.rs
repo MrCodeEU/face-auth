@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Config {
     pub platform: PlatformConfig,
@@ -34,7 +34,7 @@ pub struct DaemonConfig {
     pub execution_provider: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct CameraConfig {
     pub device_path: String,
@@ -92,21 +92,6 @@ pub struct NotifyConfig {
     pub timeout_ms: i32,
 }
 
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            platform: PlatformConfig::default(),
-            daemon: DaemonConfig::default(),
-            camera: CameraConfig::default(),
-            recognition: RecognitionConfig::default(),
-            liveness: LivenessConfig::default(),
-            geometry: GeometryConfig::default(),
-            logging: LoggingConfig::default(),
-            notify: NotifyConfig::default(),
-        }
-    }
-}
-
 impl Default for PlatformConfig {
     fn default() -> Self {
         Self {
@@ -126,15 +111,6 @@ impl Default for DaemonConfig {
             idle_unload_s: 0,
             max_concurrent: 1,
             execution_provider: "cpu".into(),
-        }
-    }
-}
-
-impl Default for CameraConfig {
-    fn default() -> Self {
-        Self {
-            device_path: String::new(),
-            flush_frames: 0,
         }
     }
 }

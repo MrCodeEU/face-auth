@@ -91,7 +91,7 @@ extern "C" {
 
 fn log_open() {
     unsafe {
-        openlog(b"pam_face\0".as_ptr() as *const c_char, 0, LOG_AUTH);
+        openlog(c"pam_face".as_ptr(), 0, LOG_AUTH);
     }
 }
 
@@ -104,21 +104,21 @@ fn log_close() {
 fn log_info(msg: &str) {
     let c_msg = std::ffi::CString::new(msg).unwrap_or_default();
     unsafe {
-        syslog(LOG_INFO, b"%s\0".as_ptr() as *const c_char, c_msg.as_ptr());
+        syslog(LOG_INFO, c"%s".as_ptr(), c_msg.as_ptr());
     }
 }
 
 fn log_debug(msg: &str) {
     let c_msg = std::ffi::CString::new(msg).unwrap_or_default();
     unsafe {
-        syslog(LOG_DEBUG, b"%s\0".as_ptr() as *const c_char, c_msg.as_ptr());
+        syslog(LOG_DEBUG, c"%s".as_ptr(), c_msg.as_ptr());
     }
 }
 
 fn log_err(msg: &str) {
     let c_msg = std::ffi::CString::new(msg).unwrap_or_default();
     unsafe {
-        syslog(LOG_ERR, b"%s\0".as_ptr() as *const c_char, c_msg.as_ptr());
+        syslog(LOG_ERR, c"%s".as_ptr(), c_msg.as_ptr());
     }
 }
 
@@ -212,7 +212,7 @@ fn do_authenticate(pamh: *mut pam_handle_t, _flags: c_int) -> c_int {
             return PAM_AUTHINFO_UNAVAIL;
         }
     };
-    log_debug(&format!("auth request for user"));
+    log_debug("auth request for user");
 
     let conv = get_conv(pamh);
 

@@ -115,7 +115,7 @@ fn verify_model(models_dir: &Path, spec: &ModelSpec) -> bool {
             return false;
         }
     };
-    if shape_matches(spec.input_shape, &actual_shape) {
+    if shape_matches(spec.input_shape, actual_shape) {
         println!("  ✓ Input shape matches expected {:?}", spec.input_shape);
     } else {
         println!(

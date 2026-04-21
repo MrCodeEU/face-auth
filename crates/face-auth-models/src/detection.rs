@@ -125,8 +125,8 @@ impl FaceDetector {
 
             let num_anchors = grid_h * grid_w * ANCHORS_PER_CELL;
 
-            for anchor_idx in 0..num_anchors {
-                let score = sigmoid(scores[anchor_idx]);
+            for (anchor_idx, &raw_score) in scores.iter().enumerate().take(num_anchors) {
+                let score = sigmoid(raw_score);
                 if score < CONF_THRESHOLD {
                     continue;
                 }

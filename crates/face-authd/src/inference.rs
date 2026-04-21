@@ -13,7 +13,7 @@ use std::time::{Duration, Instant};
 pub enum InferenceResult {
     Metrics {
         metrics: FaceMetrics,
-        embedding: Option<[f32; 512]>,
+        embedding: Option<Box<[f32; 512]>>,
         is_live: Option<bool>,
     },
     NoFace,
@@ -243,7 +243,7 @@ fn process_frame(
         if let Some(rec) = recognizer {
             let aligned = align_face(&frame.data, frame.width, frame.height, &det.landmarks);
             match rec.embed(&aligned) {
-                Ok(emb) => embedding = Some(emb),
+                Ok(emb) => embedding = Some(Box::new(emb)),
                 Err(e) => tracing::warn!("embedding error: {e}"),
             }
         }

@@ -226,7 +226,7 @@ async fn handle_pam_connection(
             // Try to acquire session slot
             {
                 let mut sm = session_manager.lock().await;
-                if let Err(_) = sm.try_start(session_id) {
+                if sm.try_start(session_id).is_err() {
                     tracing::info!(session_id, "rejected: session already active");
                     let writer_stream = std_stream.try_clone()?;
                     tokio::task::spawn_blocking(move || {

@@ -128,8 +128,8 @@ pub fn clahe(
     tile_size: usize,
     clip_limit: f32,
 ) -> Vec<u8> {
-    let tiles_x = (width + tile_size - 1) / tile_size;
-    let tiles_y = (height + tile_size - 1) / tile_size;
+    let tiles_x = width.div_ceil(tile_size);
+    let tiles_y = height.div_ceil(tile_size);
 
     // Build clipped histograms for each tile
     let mut tile_maps: Vec<Vec<u8>> = Vec::with_capacity(tiles_x * tiles_y);
