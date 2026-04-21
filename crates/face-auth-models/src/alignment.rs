@@ -11,11 +11,11 @@ pub struct AlignedFace {
 
 /// ArcFace canonical target positions for 112×112 crop.
 const ARCFACE_TARGETS: [(f32, f32); 5] = [
-    (38.2946, 51.6963),  // left eye
-    (73.5318, 51.5014),  // right eye
-    (56.0252, 71.7366),  // nose tip
-    (41.5493, 92.3655),  // left mouth corner
-    (70.7299, 92.2041),  // right mouth corner
+    (38.2946, 51.6963), // left eye
+    (73.5318, 51.5014), // right eye
+    (56.0252, 71.7366), // nose tip
+    (41.5493, 92.3655), // left mouth corner
+    (70.7299, 92.2041), // right mouth corner
 ];
 
 /// Align a grayscale frame using 5-point landmarks to produce a 112×112 crop
@@ -85,9 +85,23 @@ fn compute_similarity_transform(
     let dst_centered: Vec<(f32, f32)> = dst.iter().map(|p| (p.0 - dst_cx, p.1 - dst_cy)).collect();
 
     // Compute scale: ratio of RMS distances
-    let src_rms = (src_centered.iter().map(|p| p.0 * p.0 + p.1 * p.1).sum::<f32>() / 5.0).sqrt();
-    let dst_rms = (dst_centered.iter().map(|p| p.0 * p.0 + p.1 * p.1).sum::<f32>() / 5.0).sqrt();
-    let scale = if src_rms > 1e-6 { dst_rms / src_rms } else { 1.0 };
+    let src_rms = (src_centered
+        .iter()
+        .map(|p| p.0 * p.0 + p.1 * p.1)
+        .sum::<f32>()
+        / 5.0)
+        .sqrt();
+    let dst_rms = (dst_centered
+        .iter()
+        .map(|p| p.0 * p.0 + p.1 * p.1)
+        .sum::<f32>()
+        / 5.0)
+        .sqrt();
+    let scale = if src_rms > 1e-6 {
+        dst_rms / src_rms
+    } else {
+        1.0
+    };
 
     // Compute rotation angle using Procrustes (cross-covariance)
     let mut num = 0.0f32; // sin component
@@ -144,7 +158,10 @@ mod tests {
         // When src == dst, transform should be ~identity
         let points: [(f32, f32); 5] = ARCFACE_TARGETS;
         let (rot, scale, tx, ty) = compute_similarity_transform(&points, &points);
-        assert!((scale - 1.0).abs() < 0.01, "scale should be ~1.0, got {scale}");
+        assert!(
+            (scale - 1.0).abs() < 0.01,
+            "scale should be ~1.0, got {scale}"
+        );
         assert!(tx.abs() < 0.5, "tx should be ~0, got {tx}");
         assert!(ty.abs() < 0.5, "ty should be ~0, got {ty}");
         assert!((rot[(0, 0)] - 1.0).abs() < 0.01);

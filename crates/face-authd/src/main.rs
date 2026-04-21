@@ -36,17 +36,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if is_tty {
         tracing_subscriber::fmt().with_env_filter(filter).init();
     } else {
-        tracing_subscriber::fmt().with_env_filter(filter).json().init();
+        tracing_subscriber::fmt()
+            .with_env_filter(filter)
+            .json()
+            .init();
     }
 
     tracing::info!("face-authd starting");
 
     // Pre-load ML models (once, reused across all auth sessions)
     let ep = initial_config.daemon.execution_provider.clone();
-    let initial_models = inference::ModelCache::load(&ep)
-        .expect("failed to load ML models at startup");
+    let initial_models =
+        inference::ModelCache::load(&ep).expect("failed to load ML models at startup");
     tracing::info!(execution_provider = %ep, "ML models loaded (SCRFD + ArcFace)");
-    let models = Arc::new(tokio::sync::Mutex::new(ModelStore::new(initial_models, &ep)));
+    let models = Arc::new(tokio::sync::Mutex::new(ModelStore::new(
+        initial_models,
+        &ep,
+    )));
 
     // Wrap config for live reload
     let config: LiveConfig = Arc::new(RwLock::new(initial_config));
@@ -208,7 +214,11 @@ async fn handle_pam_connection(
             session_id,
         } => {
             if version != PROTOCOL_VERSION {
-                tracing::warn!(version, expected = PROTOCOL_VERSION, "protocol version mismatch");
+                tracing::warn!(
+                    version,
+                    expected = PROTOCOL_VERSION,
+                    "protocol version mismatch"
+                );
             }
             tracing::info!(session_id, "auth request received");
             tracing::debug!(session_id, %username, "auth request details");

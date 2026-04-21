@@ -172,9 +172,8 @@ fn process_frame(
     metrics.blur_score = quality::blur_score(&frame.data, &det.bbox, frame.width, frame.height);
 
     // Only run liveness + recognition if face is reasonably positioned
-    let should_process = metrics.face_width_ratio > 0.10
-        && metrics.eyes_visible
-        && !metrics.ir_saturated;
+    let should_process =
+        metrics.face_width_ratio > 0.10 && metrics.eyes_visible && !metrics.ir_saturated;
 
     let mut is_live = None;
     let mut embedding = None;
@@ -200,7 +199,10 @@ fn process_frame(
 
             if !live_pass {
                 let elapsed_ms = start.elapsed().as_millis();
-                tracing::debug!(elapsed_ms, "IR texture spoof detected, skipping recognition");
+                tracing::debug!(
+                    elapsed_ms,
+                    "IR texture spoof detected, skipping recognition"
+                );
                 return InferenceResult::Metrics {
                     metrics,
                     embedding: None,

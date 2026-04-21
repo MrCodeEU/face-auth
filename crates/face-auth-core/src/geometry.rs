@@ -24,7 +24,9 @@ pub struct BBox {
 }
 
 impl BBox {
-    pub fn width(&self) -> f32 { self.x2 - self.x1 }
+    pub fn width(&self) -> f32 {
+        self.x2 - self.x1
+    }
 }
 
 /// Computed geometry metrics for a detected face.
@@ -72,7 +74,11 @@ impl StateMachine {
         }
     }
 
-    pub fn transition(&mut self, metrics: Option<&FaceMetrics>, now: Instant) -> Option<FeedbackState> {
+    pub fn transition(
+        &mut self,
+        metrics: Option<&FaceMetrics>,
+        now: Instant,
+    ) -> Option<FeedbackState> {
         // Done is terminal
         if self.state == AuthState::Done {
             return None;
@@ -93,7 +99,8 @@ impl StateMachine {
         let should_emit = match &self.state {
             AuthState::Guidance(current) if *current == desired => false,
             _ => {
-                let elapsed = self.last_guidance_change
+                let elapsed = self
+                    .last_guidance_change
                     .map(|t| now.duration_since(t))
                     .unwrap_or(Duration::MAX);
                 elapsed >= self.debounce
@@ -208,7 +215,12 @@ mod tests {
                 left_eye_conf: 0.95,
                 right_eye_conf: 0.95,
             },
-            BBox { x1: 80.0, y1: 120.0, x2: 200.0, y2: 250.0 },
+            BBox {
+                x1: 80.0,
+                y1: 120.0,
+                x2: 200.0,
+                y2: 250.0,
+            },
         )
     }
 
@@ -285,7 +297,11 @@ mod tests {
         // Nose extremely low → looking way down → tell user to tilt up
         lm.nose.1 = 250.0;
         let m = analyze_geometry(&lm, &bbox, 640, 480);
-        assert!(m.pitch_deg > 45.0, "pitch_deg={} should be >45", m.pitch_deg);
+        assert!(
+            m.pitch_deg > 45.0,
+            "pitch_deg={} should be >45",
+            m.pitch_deg
+        );
         assert_eq!(classify(&m, &default_cfg()), FeedbackState::TiltUp);
     }
 
@@ -295,7 +311,11 @@ mod tests {
         // Nose above eyes → looking way up → tell user to tilt down
         lm.nose.1 = 120.0;
         let m = analyze_geometry(&lm, &bbox, 640, 480);
-        assert!(m.pitch_deg < -45.0, "pitch_deg={} should be <-45", m.pitch_deg);
+        assert!(
+            m.pitch_deg < -45.0,
+            "pitch_deg={} should be <-45",
+            m.pitch_deg
+        );
         assert_eq!(classify(&m, &default_cfg()), FeedbackState::TiltDown);
     }
 
@@ -305,7 +325,11 @@ mod tests {
         // Tilt head: right eye much lower than left
         lm.right_eye.1 = 220.0; // 70px lower
         let m = analyze_geometry(&lm, &bbox, 640, 480);
-        assert!(m.roll_deg.abs() > 35.0, "roll_deg={} should be >35", m.roll_deg);
+        assert!(
+            m.roll_deg.abs() > 35.0,
+            "roll_deg={} should be >35",
+            m.roll_deg
+        );
         assert_eq!(classify(&m, &default_cfg()), FeedbackState::LookAtCamera);
     }
 

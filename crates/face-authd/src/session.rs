@@ -1,6 +1,4 @@
 use crate::camera::CameraHandle;
-#[cfg(unix)]
-use std::os::unix::process::CommandExt;
 use crate::error::DaemonError;
 use crate::inference::{InferenceResult, InferenceThread};
 use face_auth_core::config::Config;
@@ -9,9 +7,11 @@ use face_auth_core::framing::write_message;
 use face_auth_core::geometry::StateMachine;
 use face_auth_core::protocol::{AuthOutcome, DaemonMessage, FeedbackState};
 use face_auth_models::recognition::cosine_similarity;
-use std::io::BufWriter;
-use std::sync::Arc;
 use std::collections::VecDeque;
+use std::io::BufWriter;
+#[cfg(unix)]
+use std::os::unix::process::CommandExt;
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 pub struct SessionManager {
@@ -95,7 +95,12 @@ async fn run_session_inner(
                     "stale enrollment format — re-enroll for best accuracy"
                 );
             }
-            tracing::info!(session_id, count = e.len(), version = ver, "enrollment loaded");
+            tracing::info!(
+                session_id,
+                count = e.len(),
+                version = ver,
+                "enrollment loaded"
+            );
             e
         }
         Err(e) => {
@@ -174,8 +179,14 @@ fn detection_loop(
     frames_required: u32,
 ) {
     let outcome = detection_loop_inner(
-        &inference, geo_config, pam_stream, session_id, timeout,
-        stored_embeddings, threshold, frames_required,
+        &inference,
+        geo_config,
+        pam_stream,
+        session_id,
+        timeout,
+        stored_embeddings,
+        threshold,
+        frames_required,
     );
     // Send result IMMEDIATELY — before cleanup. Saves ~360ms of user-perceived latency.
     let _ = send_result(pam_stream, session_id, outcome.clone());
@@ -226,9 +237,11 @@ fn detection_loop_inner(
         diag_frames += 1;
         let now = Instant::now();
         let (metrics, embedding, is_live) = match result {
-            InferenceResult::Metrics { metrics, embedding, is_live } => {
-                (Some(metrics), embedding, is_live)
-            }
+            InferenceResult::Metrics {
+                metrics,
+                embedding,
+                is_live,
+            } => (Some(metrics), embedding, is_live),
             InferenceResult::NoFace => {
                 diag_no_face += 1;
                 (None, None, None)
@@ -265,8 +278,8 @@ fn detection_loop_inner(
 
                 // Require temporal liveness stability: ≥80% of last 10 frames must pass
                 let pass_count = liveness_history.iter().filter(|&&v| v).count();
-                let liveness_stable = liveness_history.len() >= 1
-                    && pass_count * 100 / liveness_history.len() >= 80;
+                let liveness_stable =
+                    liveness_history.len() >= 1 && pass_count * 100 / liveness_history.len() >= 80;
 
                 if !liveness_stable {
                     if liveness_history.len() >= 1 {
@@ -288,8 +301,12 @@ fn detection_loop_inner(
                         .map(|stored| cosine_similarity(emb, stored))
                         .fold(f32::NEG_INFINITY, f32::max);
 
-                    if max_sim > diag_best_sim { diag_best_sim = max_sim; }
-                    if max_sim < diag_worst_sim { diag_worst_sim = max_sim; }
+                    if max_sim > diag_best_sim {
+                        diag_best_sim = max_sim;
+                    }
+                    if max_sim < diag_worst_sim {
+                        diag_worst_sim = max_sim;
+                    }
 
                     if max_sim >= threshold {
                         consecutive_matches += 1;
@@ -308,11 +325,7 @@ fn detection_loop_inner(
                             frames_required
                         };
                         if consecutive_matches >= effective_required {
-                            tracing::info!(
-                                session_id,
-                                max_sim,
-                                "authentication successful"
-                            );
+                            tracing::info!(session_id, max_sim, "authentication successful");
                             return AuthOutcome::Success;
                         }
                     } else {
@@ -403,7 +416,8 @@ fn send_desktop_notification(username: &str, timeout_ms: i32) {
             "--app-name=face-auth",
             "--icon=face-recognition",
             "--urgency=low",
-            "--expire-time", &timeout_arg,
+            "--expire-time",
+            &timeout_arg,
             "Face Authentication",
             "Authenticated successfully",
         ])
@@ -434,7 +448,10 @@ fn send_result(
     outcome: AuthOutcome,
 ) -> Result<(), DaemonError> {
     tracing::info!(session_id, ?outcome, "sending auth result");
-    let msg = DaemonMessage::AuthResult { session_id, outcome };
+    let msg = DaemonMessage::AuthResult {
+        session_id,
+        outcome,
+    };
     let mut writer = BufWriter::new(stream);
     write_message(&mut writer, &msg)?;
     std::io::Write::flush(&mut writer)?;

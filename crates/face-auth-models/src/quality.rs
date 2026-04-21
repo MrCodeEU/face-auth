@@ -251,7 +251,11 @@ fn compute_local_contrast_cv(pixels: &[u8], width: usize, height: usize) -> f32 
         return 0.0; // Nearly uniform image
     }
 
-    let variance: f32 = patch_stddevs.iter().map(|s| (s - mean) * (s - mean)).sum::<f32>() / n;
+    let variance: f32 = patch_stddevs
+        .iter()
+        .map(|s| (s - mean) * (s - mean))
+        .sum::<f32>()
+        / n;
     variance.sqrt() / mean
 }
 
@@ -292,7 +296,12 @@ mod tests {
     #[test]
     fn not_saturated() {
         let data = vec![128u8; 640 * 360];
-        let bbox = BBox { x1: 100.0, y1: 100.0, x2: 200.0, y2: 200.0 };
+        let bbox = BBox {
+            x1: 100.0,
+            y1: 100.0,
+            x2: 200.0,
+            y2: 200.0,
+        };
         assert!(!ir_saturated(&data, &bbox, 640));
     }
 
@@ -305,7 +314,12 @@ mod tests {
                 data[row * 640 + col] = 255;
             }
         }
-        let bbox = BBox { x1: 100.0, y1: 100.0, x2: 200.0, y2: 200.0 };
+        let bbox = BBox {
+            x1: 100.0,
+            y1: 100.0,
+            x2: 200.0,
+            y2: 200.0,
+        };
         assert!(ir_saturated(&data, &bbox, 640));
     }
 
@@ -318,7 +332,12 @@ mod tests {
                 data[row * 640 + col] = if (row + col) % 2 == 0 { 200 } else { 50 };
             }
         }
-        let bbox = BBox { x1: 100.0, y1: 100.0, x2: 200.0, y2: 200.0 };
+        let bbox = BBox {
+            x1: 100.0,
+            y1: 100.0,
+            x2: 200.0,
+            y2: 200.0,
+        };
         let score = blur_score(&data, &bbox, 640, 360);
         assert!(score > 50.0, "expected sharp score, got {score}");
     }
@@ -326,7 +345,12 @@ mod tests {
     #[test]
     fn uniform_image_low_blur_score() {
         let data = vec![128u8; 640 * 360];
-        let bbox = BBox { x1: 100.0, y1: 100.0, x2: 200.0, y2: 200.0 };
+        let bbox = BBox {
+            x1: 100.0,
+            y1: 100.0,
+            x2: 200.0,
+            y2: 200.0,
+        };
         let score = blur_score(&data, &bbox, 640, 360);
         assert!(score < 1.0, "expected blurry score, got {score}");
     }
@@ -344,7 +368,12 @@ mod tests {
                 data[row * 640 + col] = v;
             }
         }
-        let bbox = BBox { x1: 100.0, y1: 100.0, x2: 260.0, y2: 260.0 };
+        let bbox = BBox {
+            x1: 100.0,
+            y1: 100.0,
+            x2: 260.0,
+            y2: 260.0,
+        };
         let scores = ir_liveness_check(&data, &bbox, 640, 360);
         assert!(
             scores.lbp_entropy > 5.0,
@@ -357,7 +386,12 @@ mod tests {
     fn lbp_entropy_uniform_image_low() {
         // Uniform → low LBP entropy
         let data = vec![128u8; 640 * 360];
-        let bbox = BBox { x1: 100.0, y1: 100.0, x2: 260.0, y2: 260.0 };
+        let bbox = BBox {
+            x1: 100.0,
+            y1: 100.0,
+            x2: 260.0,
+            y2: 260.0,
+        };
         let scores = ir_liveness_check(&data, &bbox, 640, 360);
         assert!(
             scores.lbp_entropy < 1.0,
@@ -379,7 +413,12 @@ mod tests {
         }
         // Bottom-right quadrant stays uniform (128) → low std dev
         // This creates patches with very different internal variances
-        let bbox = BBox { x1: 100.0, y1: 100.0, x2: 260.0, y2: 260.0 };
+        let bbox = BBox {
+            x1: 100.0,
+            y1: 100.0,
+            x2: 260.0,
+            y2: 260.0,
+        };
         let scores = ir_liveness_check(&data, &bbox, 640, 360);
         assert!(
             scores.local_contrast_cv > 0.3,
@@ -391,7 +430,12 @@ mod tests {
     #[test]
     fn local_contrast_cv_uniform_low() {
         let data = vec![128u8; 640 * 360];
-        let bbox = BBox { x1: 100.0, y1: 100.0, x2: 260.0, y2: 260.0 };
+        let bbox = BBox {
+            x1: 100.0,
+            y1: 100.0,
+            x2: 260.0,
+            y2: 260.0,
+        };
         let scores = ir_liveness_check(&data, &bbox, 640, 360);
         assert!(
             scores.local_contrast_cv < 0.1,

@@ -9,9 +9,7 @@
 // Listens on /run/face-auth/pam.sock (requires root / socket dir to exist).
 
 use face_auth_core::framing::{read_message, write_message};
-use face_auth_core::protocol::{
-    AuthOutcome, DaemonMessage, FeedbackState, PamRequest,
-};
+use face_auth_core::protocol::{AuthOutcome, DaemonMessage, FeedbackState, PamRequest};
 use std::io::BufWriter;
 use std::os::unix::net::UnixListener;
 use std::path::Path;
@@ -65,7 +63,11 @@ fn main() {
         };
 
         match &request {
-            PamRequest::Auth { username, session_id, .. } => {
+            PamRequest::Auth {
+                username,
+                session_id,
+                ..
+            } => {
                 println!("  Auth request: user={username}, session_id={session_id}");
             }
             PamRequest::Cancel { session_id } => {

@@ -4,14 +4,26 @@ pub const PROTOCOL_VERSION: u32 = 1;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum PamRequest {
-    Auth { version: u32, username: String, session_id: u64 },
-    Cancel { session_id: u64 },
+    Auth {
+        version: u32,
+        username: String,
+        session_id: u64,
+    },
+    Cancel {
+        session_id: u64,
+    },
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum DaemonMessage {
-    Feedback { session_id: u64, state: FeedbackState },
-    AuthResult { session_id: u64, outcome: AuthOutcome },
+    Feedback {
+        session_id: u64,
+        state: FeedbackState,
+    },
+    AuthResult {
+        session_id: u64,
+        outcome: AuthOutcome,
+    },
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]

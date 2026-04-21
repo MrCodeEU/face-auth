@@ -109,12 +109,7 @@ impl LivenessDetector {
 
 /// Crop face region from grayscale frame and resize to 128×128 for liveness model.
 /// Expands bbox by 20% to include some context (forehead, chin).
-fn preprocess(
-    frame_data: &[u8],
-    frame_width: u32,
-    frame_height: u32,
-    bbox: &BBox,
-) -> Array4<f32> {
+fn preprocess(frame_data: &[u8], frame_width: u32, frame_height: u32, bbox: &BBox) -> Array4<f32> {
     // Expand bbox by 20% for context
     let bw = bbox.x2 - bbox.x1;
     let bh = bbox.y2 - bbox.y1;

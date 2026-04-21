@@ -177,12 +177,7 @@ fn is_user_in_group(_uid: u32, target_gid: u32) -> bool {
 }
 
 /// Fork a child, drop privileges, try opening device, report via exit code.
-fn fork_and_test(
-    device: &str,
-    uid: u32,
-    gid: u32,
-    supplementary: &[u32],
-) -> Result<(), String> {
+fn fork_and_test(device: &str, uid: u32, gid: u32, supplementary: &[u32]) -> Result<(), String> {
     let pid = unsafe { libc::fork() };
     if pid < 0 {
         return Err("fork failed".to_string());

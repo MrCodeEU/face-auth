@@ -83,8 +83,8 @@ impl FaceDetector {
     ) -> Result<Vec<Detection>, DetectionError> {
         let input = preprocess(frame_data, frame_width, frame_height);
 
-        let tensor = Tensor::from_array(input)
-            .map_err(|e| DetectionError::Inference(e.to_string()))?;
+        let tensor =
+            Tensor::from_array(input).map_err(|e| DetectionError::Inference(e.to_string()))?;
 
         let outputs = self
             .session

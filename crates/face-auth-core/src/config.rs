@@ -132,7 +132,10 @@ impl Default for DaemonConfig {
 
 impl Default for CameraConfig {
     fn default() -> Self {
-        Self { device_path: String::new(), flush_frames: 0 }
+        Self {
+            device_path: String::new(),
+            flush_frames: 0,
+        }
     }
 }
 
@@ -176,14 +179,16 @@ impl Default for GeometryConfig {
 
 impl Default for LoggingConfig {
     fn default() -> Self {
-        Self { level: "info".into() }
+        Self {
+            level: "info".into(),
+        }
     }
 }
 
 impl Default for NotifyConfig {
     fn default() -> Self {
         Self {
-            enabled: false,  // opt-in
+            enabled: false, // opt-in
             timeout_ms: 3000,
         }
     }
@@ -239,13 +244,17 @@ mod tests {
     #[test]
     fn load_partial_toml_fills_defaults() {
         let mut f = tempfile::Builder::new().suffix(".toml").tempfile().unwrap();
-        writeln!(f, r#"
+        writeln!(
+            f,
+            r#"
 [recognition]
 threshold = 0.35
 
 [geometry]
 yaw_max_deg = 30.0
-"#).unwrap();
+"#
+        )
+        .unwrap();
 
         let cfg = Config::load(f.path()).unwrap();
         assert_eq!(cfg.recognition.threshold, 0.35);

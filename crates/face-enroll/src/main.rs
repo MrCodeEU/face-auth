@@ -3,12 +3,12 @@ mod debug_ui;
 
 use face_auth_core::config::Config;
 use face_auth_core::enrollment;
+use face_auth_core::geometry::analyze_geometry;
 use face_auth_core::geometry::StateMachine;
 use face_auth_models::alignment::align_face;
 use face_auth_models::detection::FaceDetector;
 use face_auth_models::quality;
 use face_auth_models::recognition::FaceRecognizer;
-use face_auth_core::geometry::analyze_geometry;
 use std::time::{Duration, Instant};
 
 fn main() {
@@ -171,7 +171,10 @@ fn cmd_status(username: &str) {
             println!("User: {username}");
             println!("Enrolled: yes");
             println!("Embeddings: {}", embeddings.len());
-            println!("Format version: {version} (current: {})", enrollment::ENROLLMENT_VERSION);
+            println!(
+                "Format version: {version} (current: {})",
+                enrollment::ENROLLMENT_VERSION
+            );
             println!("Path: {}", enrollment::enrollment_dir(username).display());
             if version < enrollment::ENROLLMENT_VERSION {
                 println!();
@@ -214,13 +217,19 @@ fn cmd_check_config(username: &str) {
     let config = load_config();
 
     // 2. Model files
-    let model_dirs = ["models", "/usr/share/face-auth/models", "/var/lib/face-auth/models"];
+    let model_dirs = [
+        "models",
+        "/usr/share/face-auth/models",
+        "/var/lib/face-auth/models",
+    ];
     let models = [
         ("det_500m.onnx", "SCRFD detection"),
         ("w600k_mbf.onnx", "ArcFace recognition"),
     ];
     for (file, desc) in &models {
-        let found = model_dirs.iter().any(|dir| Path::new(dir).join(file).exists());
+        let found = model_dirs
+            .iter()
+            .any(|dir| Path::new(dir).join(file).exists());
         if found {
             println!("\x1b[32m[OK]\x1b[0m Model: {desc} ({file})");
         } else {
@@ -231,7 +240,9 @@ fn cmd_check_config(username: &str) {
 
     // Optional liveness model
     if config.liveness.model_enabled {
-        let found = model_dirs.iter().any(|dir| Path::new(dir).join("antispoof_q.onnx").exists());
+        let found = model_dirs
+            .iter()
+            .any(|dir| Path::new(dir).join("antispoof_q.onnx").exists());
         if found {
             println!("\x1b[32m[OK]\x1b[0m Model: liveness (antispoof_q.onnx)");
         } else {
@@ -277,18 +288,16 @@ fn cmd_check_config(username: &str) {
         Ok(path) => {
             // Try opening
             match v4l::Device::with_path(&path) {
-                Ok(dev) => {
-                    match v4l::video::Capture::format(&dev) {
-                        Ok(fmt) => println!(
-                            "\x1b[32m[OK]\x1b[0m Camera: {path} ({}x{})",
-                            fmt.width, fmt.height
-                        ),
-                        Err(e) => {
-                            println!("\x1b[31m[FAIL]\x1b[0m Camera {path}: cannot get format: {e}");
-                            errors += 1;
-                        }
+                Ok(dev) => match v4l::video::Capture::format(&dev) {
+                    Ok(fmt) => println!(
+                        "\x1b[32m[OK]\x1b[0m Camera: {path} ({}x{})",
+                        fmt.width, fmt.height
+                    ),
+                    Err(e) => {
+                        println!("\x1b[31m[FAIL]\x1b[0m Camera {path}: cannot get format: {e}");
+                        errors += 1;
                     }
-                }
+                },
                 Err(e) => {
                     println!("\x1b[31m[FAIL]\x1b[0m Camera {path}: {e}");
                     errors += 1;
@@ -305,18 +314,16 @@ fn cmd_check_config(username: &str) {
     let ir_paths = ["ir-emitter.toml", "/etc/face-auth/ir-emitter.toml"];
     let ir_found = ir_paths.iter().find(|p| Path::new(p).exists());
     match ir_found {
-        Some(path) => {
-            match face_auth_platform::ir_emitter::IrEmitterConfig::load(path) {
-                Ok(cfg) => println!(
-                    "\x1b[32m[OK]\x1b[0m IR emitter: {path} (unit={}, selector={})",
-                    cfg.unit, cfg.selector
-                ),
-                Err(e) => {
-                    println!("\x1b[33m[WARN]\x1b[0m IR emitter config parse error: {e}");
-                    warnings += 1;
-                }
+        Some(path) => match face_auth_platform::ir_emitter::IrEmitterConfig::load(path) {
+            Ok(cfg) => println!(
+                "\x1b[32m[OK]\x1b[0m IR emitter: {path} (unit={}, selector={})",
+                cfg.unit, cfg.selector
+            ),
+            Err(e) => {
+                println!("\x1b[33m[WARN]\x1b[0m IR emitter config parse error: {e}");
+                warnings += 1;
             }
-        }
+        },
         None => {
             println!("\x1b[33m[WARN]\x1b[0m IR emitter config not found (may work without it)");
             warnings += 1;
@@ -335,7 +342,10 @@ fn cmd_check_config(username: &str) {
                 );
                 warnings += 1;
             } else {
-                println!("\x1b[32m[OK]\x1b[0m Enrollment: {username} ({} embeddings, v{ver})", e.len());
+                println!(
+                    "\x1b[32m[OK]\x1b[0m Enrollment: {username} ({} embeddings, v{ver})",
+                    e.len()
+                );
             }
         }
         Err(_) => {
@@ -346,7 +356,10 @@ fn cmd_check_config(username: &str) {
 
     // 6. Daemon socket
     if Path::new(&config.daemon.socket_path).exists() {
-        println!("\x1b[32m[OK]\x1b[0m Daemon: socket exists ({})", config.daemon.socket_path);
+        println!(
+            "\x1b[32m[OK]\x1b[0m Daemon: socket exists ({})",
+            config.daemon.socket_path
+        );
     } else {
         println!("\x1b[33m[WARN]\x1b[0m Daemon: socket not found (is face-authd running?)");
         warnings += 1;
@@ -367,15 +380,24 @@ fn cmd_check_config(username: &str) {
 
     // 8. Config value sanity checks
     if config.recognition.threshold < 0.5 {
-        println!("\x1b[33m[WARN]\x1b[0m Threshold {:.2} is low — may allow spoofs", config.recognition.threshold);
+        println!(
+            "\x1b[33m[WARN]\x1b[0m Threshold {:.2} is low — may allow spoofs",
+            config.recognition.threshold
+        );
         warnings += 1;
     }
     if config.recognition.threshold > 0.95 {
-        println!("\x1b[33m[WARN]\x1b[0m Threshold {:.2} is very high — may reject real faces", config.recognition.threshold);
+        println!(
+            "\x1b[33m[WARN]\x1b[0m Threshold {:.2} is very high — may reject real faces",
+            config.recognition.threshold
+        );
         warnings += 1;
     }
     if config.daemon.session_timeout_s < 3 {
-        println!("\x1b[33m[WARN]\x1b[0m Timeout {}s is very short", config.daemon.session_timeout_s);
+        println!(
+            "\x1b[33m[WARN]\x1b[0m Timeout {}s is very short",
+            config.daemon.session_timeout_s
+        );
         warnings += 1;
     }
 
@@ -454,7 +476,9 @@ fn cmd_test_auth(username: &str) {
         }
     };
     stream
-        .set_read_timeout(Some(Duration::from_secs(config.daemon.session_timeout_s + 5)))
+        .set_read_timeout(Some(Duration::from_secs(
+            config.daemon.session_timeout_s + 5,
+        )))
         .ok();
 
     let session_id: u64 = std::time::SystemTime::now()
@@ -630,24 +654,15 @@ fn cmd_test_auth_debug(username: &str) {
             let det = &detections[0];
             let mut metrics =
                 analyze_geometry(&det.landmarks, &det.bbox, frame.width, frame.height);
-            metrics.ir_saturated =
-                quality::ir_saturated(&frame.data, &det.bbox, frame.width);
-            metrics.blur_score = quality::blur_score(
-                &frame.data,
-                &det.bbox,
-                frame.width,
-                frame.height,
-            );
+            metrics.ir_saturated = quality::ir_saturated(&frame.data, &det.bbox, frame.width);
+            metrics.blur_score =
+                quality::blur_score(&frame.data, &det.bbox, frame.width, frame.height);
 
             let feedback = state_machine.transition(Some(&metrics), now);
 
             // Liveness check
-            let liveness_scores = quality::ir_liveness_check(
-                &frame.data,
-                &det.bbox,
-                frame.width,
-                frame.height,
-            );
+            let liveness_scores =
+                quality::ir_liveness_check(&frame.data, &det.bbox, frame.width, frame.height);
             let live_pass = liveness_scores.is_live(
                 config.liveness.lbp_entropy_min,
                 config.liveness.local_contrast_cv_min,
@@ -659,8 +674,8 @@ fn cmd_test_auth_debug(username: &str) {
                 liveness_history.remove(0);
             }
             let pass_count = liveness_history.iter().filter(|&&p| p).count();
-            let liveness_stable = !liveness_history.is_empty()
-                && pass_count * 100 / liveness_history.len() >= 80;
+            let liveness_stable =
+                !liveness_history.is_empty() && pass_count * 100 / liveness_history.len() >= 80;
 
             // Alignment + recognition if in Authenticating state
             let mut similarity = None;
@@ -673,17 +688,14 @@ fn cmd_test_auth_debug(username: &str) {
             );
 
             if is_authenticating && liveness_stable {
-                let aligned =
-                    align_face(&frame.data, frame.width, frame.height, &det.landmarks);
+                let aligned = align_face(&frame.data, frame.width, frame.height, &det.landmarks);
                 aligned_crop = Some(aligned.data.clone());
                 clahe_crop = Some(clahe(&aligned.data, 112, 112, 14, 2.0));
 
                 if let Ok(embedding) = recognizer.embed(&aligned) {
                     let max_sim = enrolled
                         .iter()
-                        .map(|e| {
-                            face_auth_models::recognition::cosine_similarity(&embedding, e)
-                        })
+                        .map(|e| face_auth_models::recognition::cosine_similarity(&embedding, e))
                         .fold(0.0f32, |a, b| a.max(b));
 
                     similarity = Some(max_sim);
@@ -699,16 +711,18 @@ fn cmd_test_auth_debug(username: &str) {
                 }
             } else if !is_authenticating {
                 // In guidance state — still show crops if face detected
-                let aligned =
-                    align_face(&frame.data, frame.width, frame.height, &det.landmarks);
+                let aligned = align_face(&frame.data, frame.width, frame.height, &det.landmarks);
                 aligned_crop = Some(aligned.data.clone());
                 clahe_crop = Some(clahe(&aligned.data, 112, 112, 14, 2.0));
                 consecutive_matches = 0;
             }
 
             // Check success
-            let effective_required =
-                if best_sim >= threshold + 0.10 { 1 } else { frames_required };
+            let effective_required = if best_sim >= threshold + 0.10 {
+                1
+            } else {
+                frames_required
+            };
             if consecutive_matches >= effective_required {
                 // Flash green briefly
                 let debug_frame = DebugFrame {
@@ -722,7 +736,11 @@ fn cmd_test_auth_debug(username: &str) {
                 };
                 window.render(&debug_frame);
                 std::thread::sleep(Duration::from_millis(1500));
-                println!("Result: SUCCESS ({:.1}s, best sim: {:.3})", start.elapsed().as_secs_f32(), best_sim);
+                println!(
+                    "Result: SUCCESS ({:.1}s, best sim: {:.3})",
+                    start.elapsed().as_secs_f32(),
+                    best_sim
+                );
                 return;
             }
 
@@ -781,7 +799,11 @@ fn cmd_test_auth_debug(username: &str) {
     };
     window.render(&debug_frame);
     std::thread::sleep(Duration::from_millis(1500));
-    println!("Result: TIMEOUT ({:.1}s, best sim: {:.3})", start.elapsed().as_secs_f32(), best_sim);
+    println!(
+        "Result: TIMEOUT ({:.1}s, best sim: {:.3})",
+        start.elapsed().as_secs_f32(),
+        best_sim
+    );
     std::process::exit(1);
 }
 
@@ -1001,33 +1023,58 @@ fn cmd_uninstall() {
 // --- Install helper functions ---
 
 const RECOMMENDED_SERVICES: &[&str] = &[
-    "sddm", "gdm", "lightdm", "login", "kde", "kde-fingerprint", "kscreensaver",
-    "kscreenlocker", "xscreensaver", "sudo", "su", "polkit-1",
-    "xfce4-screensaver", "cinnamon-screensaver", "mate-screensaver",
+    "sddm",
+    "gdm",
+    "lightdm",
+    "login",
+    "kde",
+    "kde-fingerprint",
+    "kscreensaver",
+    "kscreenlocker",
+    "xscreensaver",
+    "sudo",
+    "su",
+    "polkit-1",
+    "xfce4-screensaver",
+    "cinnamon-screensaver",
+    "mate-screensaver",
 ];
 
 const SKIP_SERVICES: &[&str] = &[
-    "sddm-greeter", "sddm-autologin", "other", "password-auth", "system-auth",
-    "smartcard-auth", "fingerprint-auth", "postlogin", "config-util", "runuser",
-    "runuser-l", "remote", "crond", "atd", "cups", "httpd", "cockpit", "vlock",
+    "sddm-greeter",
+    "sddm-autologin",
+    "other",
+    "password-auth",
+    "system-auth",
+    "smartcard-auth",
+    "fingerprint-auth",
+    "postlogin",
+    "config-util",
+    "runuser",
+    "runuser-l",
+    "remote",
+    "crond",
+    "atd",
+    "cups",
+    "httpd",
+    "cockpit",
+    "vlock",
     "systemd-user",
 ];
 
 /// Recommended PAM services that may not exist yet and can be created from a template.
 /// Each entry: (service_name, fn(pam_line) -> file_content)
-const CREATABLE_SERVICES: &[(&str, fn(&str) -> String)] = &[
-    ("polkit-1", |pam_line| {
-        format!(
-            "#%PAM-1.0\n\
+const CREATABLE_SERVICES: &[(&str, fn(&str) -> String)] = &[("polkit-1", |pam_line| {
+    format!(
+        "#%PAM-1.0\n\
              # Created by face-auth installer\n\
              {pam_line}\n\
              auth       include      system-auth\n\
              account    include      system-auth\n\
              password   include      system-auth\n\
              session    include      system-auth\n"
-        )
-    }),
-];
+    )
+})];
 
 fn configure_pam_services(pam_line: &str, backup_dir: &str) {
     use std::io::{self, Write};
@@ -1215,9 +1262,14 @@ fn setup_video_group(dm_user: &str) {
     use std::process::Command;
 
     // Check if user exists
-    let user_exists = Command::new("id").arg(dm_user).output().is_ok_and(|o| o.status.success());
+    let user_exists = Command::new("id")
+        .arg(dm_user)
+        .output()
+        .is_ok_and(|o| o.status.success());
     if !user_exists {
-        warn_msg(&format!("User '{dm_user}' does not exist — skip video group setup."));
+        warn_msg(&format!(
+            "User '{dm_user}' does not exist — skip video group setup."
+        ));
         return;
     }
 
@@ -1231,7 +1283,9 @@ fn setup_video_group(dm_user: &str) {
     if in_video {
         info_msg(&format!("{dm_user} already in video group."));
     } else {
-        let _ = Command::new("usermod").args(["-aG", "video", dm_user]).status();
+        let _ = Command::new("usermod")
+            .args(["-aG", "video", dm_user])
+            .status();
         info_msg(&format!("Added {dm_user} to video group."));
     }
 }
@@ -1396,7 +1450,10 @@ fn cmd_enroll(username: &str) {
     // Enrollment needs root to write to user home dirs reliably (chown after save)
     if unsafe { libc::geteuid() } != 0 {
         eprintln!("Warning: not running as root. Enrollment may fail with permission errors.");
-        eprintln!("Recommended: sudo {}", std::env::args().next().unwrap_or_default());
+        eprintln!(
+            "Recommended: sudo {}",
+            std::env::args().next().unwrap_or_default()
+        );
         eprintln!();
     }
 
@@ -1440,10 +1497,10 @@ fn cmd_enroll(username: &str) {
     // Multi-angle enrollment
     let poses = [
         ("straight ahead", 0),
-        ("slightly LEFT",  1),
+        ("slightly LEFT", 1),
         ("slightly RIGHT", 2),
-        ("slightly UP",    3),
-        ("slightly DOWN",  4),
+        ("slightly UP", 3),
+        ("slightly DOWN", 4),
     ];
 
     let embeddings_per_pose = 3;
@@ -1476,7 +1533,11 @@ fn cmd_enroll(username: &str) {
         if captured.is_empty() {
             println!("  No good frames captured for this pose. Skipping.");
         } else {
-            println!("  Captured {}/{} for {pose_name}", captured.len(), embeddings_per_pose);
+            println!(
+                "  Captured {}/{} for {pose_name}",
+                captured.len(),
+                embeddings_per_pose
+            );
             all_embeddings.extend(captured);
         }
         println!();
@@ -1499,7 +1560,8 @@ fn cmd_enroll(username: &str) {
     let all_embeddings = score_and_filter_embeddings(all_embeddings);
 
     // Save
-    match enrollment::save_embeddings(username, &all_embeddings, config.recognition.max_enrollment) {
+    match enrollment::save_embeddings(username, &all_embeddings, config.recognition.max_enrollment)
+    {
         Ok(()) => {
             println!(
                 "Enrolled {} face models for user '{username}'.",
@@ -1548,8 +1610,7 @@ fn capture_pose(
 
         let mut metrics = analyze_geometry(&det.landmarks, &det.bbox, frame.width, frame.height);
         metrics.ir_saturated = quality::ir_saturated(&frame.data, &det.bbox, frame.width);
-        metrics.blur_score =
-            quality::blur_score(&frame.data, &det.bbox, frame.width, frame.height);
+        metrics.blur_score = quality::blur_score(&frame.data, &det.bbox, frame.width, frame.height);
 
         let now = Instant::now();
         let feedback = state_machine.transition(Some(&metrics), now);
@@ -1605,7 +1666,10 @@ fn score_and_filter_embeddings(mut embeddings: Vec<[f32; 512]>) -> Vec<[f32; 512
     use face_auth_models::recognition::cosine_similarity;
 
     if embeddings.len() < 3 {
-        println!("Quality: too few embeddings to score (keeping all {}).", embeddings.len());
+        println!(
+            "Quality: too few embeddings to score (keeping all {}).",
+            embeddings.len()
+        );
         return embeddings;
     }
 
@@ -1644,7 +1708,9 @@ fn score_and_filter_embeddings(mut embeddings: Vec<[f32; 512]>) -> Vec<[f32; 512
     }
 
     if rejected > 0 {
-        println!("  Rejected {rejected} low-quality embedding(s) (avg sim < {reject_threshold:.2})");
+        println!(
+            "  Rejected {rejected} low-quality embedding(s) (avg sim < {reject_threshold:.2})"
+        );
         let filtered: Vec<[f32; 512]> = keep_indices.iter().map(|&i| embeddings[i]).collect();
         if filtered.is_empty() {
             println!("  Warning: all embeddings would be rejected — keeping originals.");
@@ -1690,7 +1756,9 @@ fn score_and_filter_embeddings(mut embeddings: Vec<[f32; 512]>) -> Vec<[f32; 512
         println!("  Suggested threshold: {suggested:.2} (current: {current:.2})");
         if (suggested - current).abs() > 0.05 {
             if suggested > current {
-                println!("  Note: you could raise threshold to {suggested:.2} for better security.");
+                println!(
+                    "  Note: you could raise threshold to {suggested:.2} for better security."
+                );
             } else {
                 println!("  Warning: current threshold {current:.2} may be too high for these embeddings.");
                 println!("  Consider lowering to {suggested:.2} in /etc/face-auth/config.toml");
@@ -1711,7 +1779,10 @@ fn cmd_enroll_debug(username: &str) {
 
     if unsafe { libc::geteuid() } != 0 {
         eprintln!("Warning: not running as root. Enrollment may fail with permission errors.");
-        eprintln!("Recommended: sudo {}", std::env::args().next().unwrap_or_default());
+        eprintln!(
+            "Recommended: sudo {}",
+            std::env::args().next().unwrap_or_default()
+        );
         eprintln!();
     }
 
@@ -1739,7 +1810,10 @@ fn cmd_enroll_debug(username: &str) {
         ("slightly DOWN", 4),
     ];
     let embeddings_per_pose = 3;
-    let max_target = config.recognition.max_enrollment.min((poses.len() * embeddings_per_pose) as u32) as usize;
+    let max_target = config
+        .recognition
+        .max_enrollment
+        .min((poses.len() * embeddings_per_pose) as u32) as usize;
 
     let mut all_embeddings: Vec<[f32; 512]> = Vec::new();
     let mut pose_idx = 0;
@@ -1790,7 +1864,11 @@ fn cmd_enroll_debug(username: &str) {
         if detections.is_empty() {
             state_machine.transition(None, now);
             detection_info = None;
-            border_mode = if flash_active { flash_until.unwrap().1 as u8 } else { 1 };
+            border_mode = if flash_active {
+                flash_until.unwrap().1 as u8
+            } else {
+                1
+            };
         } else {
             let det = &detections[0];
             let mut metrics =
@@ -1801,12 +1879,8 @@ fn cmd_enroll_debug(username: &str) {
 
             state_machine.transition(Some(&metrics), now);
 
-            let liveness_scores = quality::ir_liveness_check(
-                &frame.data,
-                &det.bbox,
-                frame.width,
-                frame.height,
-            );
+            let liveness_scores =
+                quality::ir_liveness_check(&frame.data, &det.bbox, frame.width, frame.height);
 
             let is_authenticating = matches!(
                 state_machine.state,
@@ -1823,8 +1897,7 @@ fn cmd_enroll_debug(username: &str) {
                 && metrics.blur_score >= 50.0
                 && now.duration_since(last_accepted) >= min_interval
             {
-                let aligned =
-                    align_face(&frame.data, frame.width, frame.height, &det.landmarks);
+                let aligned = align_face(&frame.data, frame.width, frame.height, &det.landmarks);
                 aligned_crop = Some(aligned.data.clone());
                 clahe_crop = Some(clahe(&aligned.data, 112, 112, 14, 2.0));
 
@@ -1841,13 +1914,13 @@ fn cmd_enroll_debug(username: &str) {
                         }
                     }
                     Err(_) => {
-                        flash_until = Some((now + Duration::from_millis(200), 4)); // red flash
+                        flash_until = Some((now + Duration::from_millis(200), 4));
+                        // red flash
                     }
                 }
             } else if !aligned_crop.is_some() {
                 // Show crops even when not capturing
-                let aligned =
-                    align_face(&frame.data, frame.width, frame.height, &det.landmarks);
+                let aligned = align_face(&frame.data, frame.width, frame.height, &det.landmarks);
                 aligned_crop = Some(aligned.data.clone());
                 clahe_crop = Some(clahe(&aligned.data, 112, 112, 14, 2.0));
             }
@@ -1898,7 +1971,8 @@ fn cmd_enroll_debug(username: &str) {
         std::process::exit(1);
     }
 
-    match enrollment::save_embeddings(username, &all_embeddings, config.recognition.max_enrollment) {
+    match enrollment::save_embeddings(username, &all_embeddings, config.recognition.max_enrollment)
+    {
         Ok(()) => {
             println!(
                 "Enrolled {} face models for user '{username}'.",
@@ -1994,8 +2068,8 @@ mod face_auth_camera {
             config.device_path.clone()
         };
 
-        let dev = Device::with_path(&device_path)
-            .map_err(|e| format!("open {device_path}: {e}"))?;
+        let dev =
+            Device::with_path(&device_path).map_err(|e| format!("open {device_path}: {e}"))?;
 
         let fmt = dev.format().map_err(|e| format!("get format: {e}"))?;
         let width = fmt.width;
@@ -2022,15 +2096,14 @@ mod face_auth_camera {
             .name("enroll-camera".into())
             .spawn(move || {
                 let fd = dev.handle().fd();
-                let mut stream =
-                    match Stream::with_buffers(&dev, Type::VideoCapture, 4) {
-                        Ok(s) => s,
-                        Err(e) => {
-                            tracing::error!("stream error: {e}");
-                            deactivate_emitter(&ir_config, fd);
-                            return;
-                        }
-                    };
+                let mut stream = match Stream::with_buffers(&dev, Type::VideoCapture, 4) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        tracing::error!("stream error: {e}");
+                        deactivate_emitter(&ir_config, fd);
+                        return;
+                    }
+                };
 
                 // Flush initial frames
                 for _ in 0..flush_frames {
@@ -2068,10 +2141,7 @@ mod face_auth_camera {
         })
     }
 
-    fn deactivate_emitter(
-        ir_config: &Option<IrEmitterConfig>,
-        fd: std::os::fd::RawFd,
-    ) {
+    fn deactivate_emitter(ir_config: &Option<IrEmitterConfig>, fd: std::os::fd::RawFd) {
         if let Some(ref cfg) = ir_config {
             let _ = cfg.deactivate(fd);
         }
@@ -2089,8 +2159,12 @@ mod face_auth_camera {
             if !Path::new(&path).exists() {
                 continue;
             }
-            let Ok(dev) = Device::with_path(&path) else { continue };
-            let Ok(formats) = dev.enum_formats() else { continue };
+            let Ok(dev) = Device::with_path(&path) else {
+                continue;
+            };
+            let Ok(formats) = dev.enum_formats() else {
+                continue;
+            };
             if formats.iter().any(|f| ir_fourccs.contains(&f.fourcc)) {
                 return Ok(path);
             }

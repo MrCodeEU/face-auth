@@ -38,23 +38,31 @@ const UVC_GET_INFO: u8 = 0x86;
 
 #[repr(C)]
 struct UvcXuControlQuery {
-    unit:      u8,
-    selector:  u8,
-    query:     u8,
-    _pad1:     u8,
-    size:      u16,
-    _pad2:     u16,
-    data:      *mut u8,
+    unit: u8,
+    selector: u8,
+    query: u8,
+    _pad1: u8,
+    size: u16,
+    _pad2: u16,
+    data: *mut u8,
 }
 
 fn uvc_query(fd: i32, unit: u8, selector: u8, query: u8, data: &mut [u8]) -> std::io::Result<()> {
     let mut req = UvcXuControlQuery {
-        unit, selector, query, _pad1: 0,
-        size: data.len() as u16, _pad2: 0,
+        unit,
+        selector,
+        query,
+        _pad1: 0,
+        size: data.len() as u16,
+        _pad2: 0,
         data: data.as_mut_ptr(),
     };
     let ret = unsafe { libc::ioctl(fd, UVCIOC_CTRL_QUERY, &mut req as *mut _) };
-    if ret < 0 { Err(std::io::Error::last_os_error()) } else { Ok(()) }
+    if ret < 0 {
+        Err(std::io::Error::last_os_error())
+    } else {
+        Ok(())
+    }
 }
 
 fn get_info(fd: i32, unit: u8, sel: u8) -> Option<u8> {
@@ -87,9 +95,15 @@ fn set_cur(fd: i32, unit: u8, sel: u8, data: &[u8]) -> std::io::Result<()> {
 /// Poll the video fd for data ready, then call stream.next().
 /// Returns None on timeout (camera stalled by bad XU command).
 fn next_frame_timeout(fd: i32, stream: &mut Stream) -> Option<Vec<u8>> {
-    let mut pfd = libc::pollfd { fd, events: libc::POLLIN, revents: 0 };
+    let mut pfd = libc::pollfd {
+        fd,
+        events: libc::POLLIN,
+        revents: 0,
+    };
     let ret = unsafe { libc::poll(&mut pfd, 1, FRAME_TIMEOUT.as_millis() as i32) };
-    if ret <= 0 { return None; }
+    if ret <= 0 {
+        return None;
+    }
     match stream.next() {
         Ok((buf, _)) => Some(buf.to_vec()),
         Err(_) => None,
@@ -107,7 +121,11 @@ fn mean_brightness(fd: i32, stream: &mut Stream) -> Option<u8> {
             count += buf.len() as u64;
         }
     }
-    if count == 0 { None } else { Some((total / count) as u8) }
+    if count == 0 {
+        None
+    } else {
+        Some((total / count) as u8)
+    }
 }
 
 // ──────────────────────────────────────────────
@@ -186,17 +204,25 @@ fn discover(device_path: &str, exhaustive: bool) -> Option<IrEmitterConfig> {
     println!("Opening {device_path}...");
     let dev = match Device::with_path(device_path) {
         Ok(d) => d,
-        Err(e) => { eprintln!("Cannot open {device_path}: {e}"); return None; }
+        Err(e) => {
+            eprintln!("Cannot open {device_path}: {e}");
+            return None;
+        }
     };
     let fd = dev.handle().fd();
 
     let mut stream = match Stream::with_buffers(&dev, Type::VideoCapture, 4) {
         Ok(s) => s,
-        Err(e) => { eprintln!("Cannot open capture stream: {e}"); return None; }
+        Err(e) => {
+            eprintln!("Cannot open capture stream: {e}");
+            return None;
+        }
     };
 
     // Warm up — flush 10 frames for AE to settle
-    for _ in 0..10 { let _ = next_frame_timeout(fd, &mut stream); }
+    for _ in 0..10 {
+        let _ = next_frame_timeout(fd, &mut stream);
+    }
     let baseline1 = mean_brightness(fd, &mut stream).unwrap_or(0);
     println!("Baseline brightness (no face): {baseline1}/255");
     println!();
@@ -204,7 +230,9 @@ fn discover(device_path: &str, exhaustive: bool) -> Option<IrEmitterConfig> {
     let mut dummy = String::new();
     std::io::stdin().read_line(&mut dummy).ok();
     // Re-measure baseline with face present — flush extra frames for AE settle
-    for _ in 0..10 { let _ = next_frame_timeout(fd, &mut stream); }
+    for _ in 0..10 {
+        let _ = next_frame_timeout(fd, &mut stream);
+    }
     let baseline2 = mean_brightness(fd, &mut stream).unwrap_or(0);
     // Use the MAX of both baselines — prevents false positives from lighting drift
     let baseline = baseline1.max(baseline2);
@@ -218,16 +246,24 @@ fn discover(device_path: &str, exhaustive: bool) -> Option<IrEmitterConfig> {
     // Exhaustive 255×255 removed — rapid-fire ioctls on unrecognised controls
     // trigger a uvcvideo kernel bug that removes /dev/videoN until module reload.
     let unit_max: u8 = 20;
-    let sel_max:  u8 = 32;
+    let sel_max: u8 = 32;
     let _ = exhaustive; // flag kept for CLI compat but ignored
 
     for unit in 1..=unit_max {
         for sel in 1..=sel_max {
-            let Some(info) = get_info(fd, unit, sel) else { continue };
-            if info & 0x02 == 0 { continue; } // no SET supported
+            let Some(info) = get_info(fd, unit, sel) else {
+                continue;
+            };
+            if info & 0x02 == 0 {
+                continue;
+            } // no SET supported
 
-            let Some(len) = get_len(fd, unit, sel) else { continue };
-            if len == 0 || len > 64 { continue; }
+            let Some(len) = get_len(fd, unit, sel) else {
+                continue;
+            };
+            if len == 0 || len > 64 {
+                continue;
+            }
 
             let original = get_cur(fd, unit, sel, len);
             let cur = original.clone().unwrap_or_else(|| vec![0u8; len as usize]);
@@ -240,7 +276,9 @@ fn discover(device_path: &str, exhaustive: bool) -> Option<IrEmitterConfig> {
             let mut found = None;
             let mut timeouts = 0u32;
             'patterns: for (i, pattern) in patterns.iter().enumerate() {
-                if set_cur(fd, unit, sel, pattern).is_err() { continue; }
+                if set_cur(fd, unit, sel, pattern).is_err() {
+                    continue;
+                }
                 std::thread::sleep(Duration::from_millis(80));
                 match mean_brightness(fd, &mut stream) {
                     Some(brightness) if brightness > threshold => {
@@ -266,7 +304,9 @@ fn discover(device_path: &str, exhaustive: bool) -> Option<IrEmitterConfig> {
                                     return None;
                                 }
                             };
-                            for _ in 0..3 { let _ = next_frame_timeout(fd, &mut stream); }
+                            for _ in 0..3 {
+                                let _ = next_frame_timeout(fd, &mut stream);
+                            }
                             break 'patterns;
                         }
                     }
@@ -292,16 +332,22 @@ fn discover(device_path: &str, exhaustive: bool) -> Option<IrEmitterConfig> {
                     let _ = set_cur(fd, unit, sel, orig);
                 }
                 std::thread::sleep(Duration::from_millis(200));
-                for _ in 0..5 { let _ = next_frame_timeout(fd, &mut stream); }
+                for _ in 0..5 {
+                    let _ = next_frame_timeout(fd, &mut stream);
+                }
                 let off_brightness = mean_brightness(fd, &mut stream).unwrap_or(0);
 
                 let _ = set_cur(fd, unit, sel, &pattern);
                 std::thread::sleep(Duration::from_millis(200));
-                for _ in 0..5 { let _ = next_frame_timeout(fd, &mut stream); }
+                for _ in 0..5 {
+                    let _ = next_frame_timeout(fd, &mut stream);
+                }
                 let on_brightness = mean_brightness(fd, &mut stream).unwrap_or(0);
 
                 let delta = on_brightness.saturating_sub(off_brightness);
-                println!("    Confirm: OFF={off_brightness}/255  ON={on_brightness}/255  delta={delta}");
+                println!(
+                    "    Confirm: OFF={off_brightness}/255  ON={on_brightness}/255  delta={delta}"
+                );
 
                 if delta >= 15 {
                     println!("    ✓ Confirmed! IR emitter control verified.");
@@ -310,7 +356,8 @@ fn discover(device_path: &str, exhaustive: bool) -> Option<IrEmitterConfig> {
                         let _ = set_cur(fd, unit, sel, orig);
                     }
                     return Some(IrEmitterConfig {
-                        unit, selector: sel,
+                        unit,
+                        selector: sel,
                         enable_data: pattern,
                         disable_data: original,
                     });
@@ -336,11 +383,19 @@ fn discover(device_path: &str, exhaustive: bool) -> Option<IrEmitterConfig> {
 // ──────────────────────────────────────────────
 
 fn save_config(cfg: &IrEmitterConfig, path: &str) {
-    let enable_hex: Vec<String> = cfg.enable_data.iter().map(|b| format!("0x{b:02x}")).collect();
-    let disable_line = cfg.disable_data.as_ref().map(|d| {
-        let h: Vec<String> = d.iter().map(|b| format!("0x{b:02x}")).collect();
-        format!("disable_data = [{}]\n", h.join(", "))
-    }).unwrap_or_default();
+    let enable_hex: Vec<String> = cfg
+        .enable_data
+        .iter()
+        .map(|b| format!("0x{b:02x}"))
+        .collect();
+    let disable_line = cfg
+        .disable_data
+        .as_ref()
+        .map(|d| {
+            let h: Vec<String> = d.iter().map(|b| format!("0x{b:02x}")).collect();
+            format!("disable_data = [{}]\n", h.join(", "))
+        })
+        .unwrap_or_default();
 
     let toml = format!(
         "# IR emitter config — face-auth ir-discover\n\
@@ -353,7 +408,10 @@ fn save_config(cfg: &IrEmitterConfig, path: &str) {
          selector    = {}\n\
          enable_data = [{}]\n\
          {}",
-        cfg.unit, cfg.selector, enable_hex.join(", "), disable_line,
+        cfg.unit,
+        cfg.selector,
+        enable_hex.join(", "),
+        disable_line,
     );
 
     // Ensure parent dir exists
@@ -390,17 +448,43 @@ fn try_known(device_path: &str, save_path: &str) {
     let fd = dev.handle().fd();
 
     let configs = [
-        KnownConfig { unit: 7,  selector: 6, data: vec![0x01, 0x03, 0x02, 0, 0, 0, 0, 0, 0], label: "unit=7  sel=6 (issue #283 variant)" },
-        KnownConfig { unit: 14, selector: 6, data: vec![0x01, 0x03, 0x02, 0, 0, 0, 0, 0, 0], label: "unit=14 sel=6 (IdeaPad/ThinkPad)" },
-        KnownConfig { unit: 7,  selector: 6, data: vec![0x01, 0x01, 0x01, 0, 0, 0, 0, 0, 0], label: "unit=7  sel=6 alt1" },
-        KnownConfig { unit: 14, selector: 6, data: vec![0x01, 0x01, 0x01, 0, 0, 0, 0, 0, 0], label: "unit=14 sel=6 alt1" },
+        KnownConfig {
+            unit: 7,
+            selector: 6,
+            data: vec![0x01, 0x03, 0x02, 0, 0, 0, 0, 0, 0],
+            label: "unit=7  sel=6 (issue #283 variant)",
+        },
+        KnownConfig {
+            unit: 14,
+            selector: 6,
+            data: vec![0x01, 0x03, 0x02, 0, 0, 0, 0, 0, 0],
+            label: "unit=14 sel=6 (IdeaPad/ThinkPad)",
+        },
+        KnownConfig {
+            unit: 7,
+            selector: 6,
+            data: vec![0x01, 0x01, 0x01, 0, 0, 0, 0, 0, 0],
+            label: "unit=7  sel=6 alt1",
+        },
+        KnownConfig {
+            unit: 14,
+            selector: 6,
+            data: vec![0x01, 0x01, 0x01, 0, 0, 0, 0, 0, 0],
+            label: "unit=14 sel=6 alt1",
+        },
     ];
 
     for (i, cfg) in configs.iter().enumerate() {
         // Read current value to restore later
         let original = get_cur(fd, cfg.unit, cfg.selector, cfg.data.len() as u16);
 
-        print!("\n[{}/{}] {}\n  Sending {:02x?} ... ", i + 1, configs.len(), cfg.label, cfg.data);
+        print!(
+            "\n[{}/{}] {}\n  Sending {:02x?} ... ",
+            i + 1,
+            configs.len(),
+            cfg.label,
+            cfg.data
+        );
         std::io::stdout().flush().ok();
 
         match set_cur(fd, cfg.unit, cfg.selector, &cfg.data) {
@@ -449,7 +533,8 @@ fn main() {
         || std::env::var("EXHAUSTIVE").as_deref() == Ok("1");
     let try_known_mode = args.iter().any(|a| a == "--try-known");
 
-    let device_path = args.iter()
+    let device_path = args
+        .iter()
         .skip(1)
         .find(|a| a.starts_with("/dev/"))
         .cloned()
@@ -457,12 +542,21 @@ fn main() {
             // auto-detect IR camera (GREY format)
             for i in 0..8 {
                 let p = format!("/dev/video{i}");
-                if !std::path::Path::new(&p).exists() { continue; }
-                let Ok(dev) = Device::with_path(&p) else { continue };
-                let Ok(fmts) = dev.enum_formats() else { continue };
+                if !std::path::Path::new(&p).exists() {
+                    continue;
+                }
+                let Ok(dev) = Device::with_path(&p) else {
+                    continue;
+                };
+                let Ok(fmts) = dev.enum_formats() else {
+                    continue;
+                };
                 let grey = v4l::FourCC::new(b"GREY");
                 let y800 = v4l::FourCC::new(b"Y800");
-                if fmts.iter().any(|f: &v4l::format::Description| f.fourcc == grey || f.fourcc == y800) {
+                if fmts
+                    .iter()
+                    .any(|f: &v4l::format::Description| f.fourcc == grey || f.fourcc == y800)
+                {
                     println!("[auto-detect] IR camera: {p}");
                     return p;
                 }
@@ -471,7 +565,8 @@ fn main() {
             std::process::exit(1);
         });
 
-    let save_path = args.windows(2)
+    let save_path = args
+        .windows(2)
         .find(|w| w[0] == "--save")
         .map(|w| w[1].clone())
         .unwrap_or_else(|| "ir-emitter.toml".to_string());
@@ -479,7 +574,9 @@ fn main() {
     if try_known_mode {
         // Also try on video2 (RGB interface) — some cameras route XU through there
         let ir_path = device_path.clone();
-        let rgb_path = ir_path.replace("video3", "video2").replace("video4", "video2");
+        let rgb_path = ir_path
+            .replace("video3", "video2")
+            .replace("video4", "video2");
         println!("Testing on IR device: {ir_path}");
         try_known(&ir_path, &save_path);
         if ir_path != rgb_path && std::path::Path::new(&rgb_path).exists() {

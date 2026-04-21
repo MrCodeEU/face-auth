@@ -13,7 +13,6 @@ const CAM_H: usize = 360;
 /// Panel starts at x=640, width=200.
 const PANEL_X: usize = 640;
 
-
 /// ARGB pixel buffer for minifb (0xAARRGGBB format, but minifb ignores alpha).
 pub struct DebugWindow {
     window: Window,
@@ -109,9 +108,36 @@ impl DebugWindow {
         };
 
         // Draw border (3px)
-        draw_rect(&mut self.buf, WIN_W, 0, 0, CAM_W, CAM_H, self.border_color, false);
-        draw_rect(&mut self.buf, WIN_W, 1, 1, CAM_W - 2, CAM_H - 2, self.border_color, false);
-        draw_rect(&mut self.buf, WIN_W, 2, 2, CAM_W - 4, CAM_H - 4, self.border_color, false);
+        draw_rect(
+            &mut self.buf,
+            WIN_W,
+            0,
+            0,
+            CAM_W,
+            CAM_H,
+            self.border_color,
+            false,
+        );
+        draw_rect(
+            &mut self.buf,
+            WIN_W,
+            1,
+            1,
+            CAM_W - 2,
+            CAM_H - 2,
+            self.border_color,
+            false,
+        );
+        draw_rect(
+            &mut self.buf,
+            WIN_W,
+            2,
+            2,
+            CAM_W - 4,
+            CAM_H - 4,
+            self.border_color,
+            false,
+        );
 
         if let Some(ref det) = frame.detection {
             self.draw_detection(det);
@@ -164,7 +190,15 @@ impl DebugWindow {
             det.landmarks.right_mouth,
         ];
         for (lx, ly) in landmarks {
-            draw_filled_circle(&mut self.buf, WIN_W, WIN_H, lx as i32, ly as i32, 3, lm_color);
+            draw_filled_circle(
+                &mut self.buf,
+                WIN_W,
+                WIN_H,
+                lx as i32,
+                ly as i32,
+                3,
+                lm_color,
+            );
         }
 
         // Confidence + similarity text above bbox
@@ -173,7 +207,15 @@ impl DebugWindow {
         } else {
             format!("{:.0}%", det.confidence * 100.0)
         };
-        draw_text(&mut self.buf, WIN_W, WIN_H, bx, by.saturating_sub(12), &label, bbox_color);
+        draw_text(
+            &mut self.buf,
+            WIN_W,
+            WIN_H,
+            bx,
+            by.saturating_sub(12),
+            &label,
+            bbox_color,
+        );
     }
 
     fn draw_panel(&mut self, frame: &DebugFrame) {
@@ -186,11 +228,27 @@ impl DebugWindow {
         let yellow = 0x00CCCC00;
 
         // State
-        draw_text(&mut self.buf, WIN_W, WIN_H, x, y, &frame.state, self.border_color);
+        draw_text(
+            &mut self.buf,
+            WIN_W,
+            WIN_H,
+            x,
+            y,
+            &frame.state,
+            self.border_color,
+        );
         y += 14;
 
         // FPS
-        draw_text(&mut self.buf, WIN_W, WIN_H, x, y, &format!("FPS: {:.0}", frame.fps), dim);
+        draw_text(
+            &mut self.buf,
+            WIN_W,
+            WIN_H,
+            x,
+            y,
+            &format!("FPS: {:.0}", frame.fps),
+            dim,
+        );
         y += 14;
 
         if let Some(ref det) = frame.detection {
@@ -198,13 +256,24 @@ impl DebugWindow {
 
             // Geometry
             draw_text(
-                &mut self.buf, WIN_W, WIN_H, x, y,
-                &format!("yaw:{:.0} pit:{:.0} rol:{:.0}", det.yaw, det.pitch, det.roll),
+                &mut self.buf,
+                WIN_W,
+                WIN_H,
+                x,
+                y,
+                &format!(
+                    "yaw:{:.0} pit:{:.0} rol:{:.0}",
+                    det.yaw, det.pitch, det.roll
+                ),
                 white,
             );
             y += 12;
             draw_text(
-                &mut self.buf, WIN_W, WIN_H, x, y,
+                &mut self.buf,
+                WIN_W,
+                WIN_H,
+                x,
+                y,
                 &format!("face: {:.0}%", det.face_ratio * 100.0),
                 white,
             );
@@ -213,7 +282,11 @@ impl DebugWindow {
             // Quality
             let blur_c = if det.blur_score >= 50.0 { green } else { red };
             draw_text(
-                &mut self.buf, WIN_W, WIN_H, x, y,
+                &mut self.buf,
+                WIN_W,
+                WIN_H,
+                x,
+                y,
                 &format!("blur: {:.0}", det.blur_score),
                 blur_c,
             );
@@ -221,7 +294,11 @@ impl DebugWindow {
 
             let sat_c = if det.ir_saturated { red } else { green };
             draw_text(
-                &mut self.buf, WIN_W, WIN_H, x, y,
+                &mut self.buf,
+                WIN_W,
+                WIN_H,
+                x,
+                y,
                 &format!("IR sat: {}", if det.ir_saturated { "YES" } else { "no" }),
                 sat_c,
             );
@@ -230,19 +307,31 @@ impl DebugWindow {
             // Liveness
             let live_c = if det.liveness_pass { green } else { yellow };
             draw_text(
-                &mut self.buf, WIN_W, WIN_H, x, y,
+                &mut self.buf,
+                WIN_W,
+                WIN_H,
+                x,
+                y,
                 &format!("LBP: {:.2}", det.lbp_entropy),
                 live_c,
             );
             y += 12;
             draw_text(
-                &mut self.buf, WIN_W, WIN_H, x, y,
+                &mut self.buf,
+                WIN_W,
+                WIN_H,
+                x,
+                y,
                 &format!("CV: {:.3}", det.contrast_cv),
                 live_c,
             );
             y += 12;
             draw_text(
-                &mut self.buf, WIN_W, WIN_H, x, y,
+                &mut self.buf,
+                WIN_W,
+                WIN_H,
+                x,
+                y,
                 &format!("live: {}", if det.liveness_pass { "PASS" } else { "FAIL" }),
                 live_c,
             );
@@ -250,9 +339,19 @@ impl DebugWindow {
 
             // Similarity
             if let Some(sim) = det.similarity {
-                let sim_c = if sim >= 0.70 { green } else if sim >= 0.50 { yellow } else { red };
+                let sim_c = if sim >= 0.70 {
+                    green
+                } else if sim >= 0.50 {
+                    yellow
+                } else {
+                    red
+                };
                 draw_text(
-                    &mut self.buf, WIN_W, WIN_H, x, y,
+                    &mut self.buf,
+                    WIN_W,
+                    WIN_H,
+                    x,
+                    y,
                     &format!("sim: {:.3}", sim),
                     sim_c,
                 );
@@ -279,34 +378,67 @@ impl DebugWindow {
 
 // --- Drawing primitives ---
 
-fn draw_rect(buf: &mut [u32], buf_w: usize, x: usize, y: usize, w: usize, h: usize, color: u32, filled: bool) {
+fn draw_rect(
+    buf: &mut [u32],
+    buf_w: usize,
+    x: usize,
+    y: usize,
+    w: usize,
+    h: usize,
+    color: u32,
+    filled: bool,
+) {
     if filled {
         for row in y..y + h {
-            if row >= CAM_H.max(WIN_H) { break; }
+            if row >= CAM_H.max(WIN_H) {
+                break;
+            }
             for col in x..x + w {
-                if col >= WIN_W { break; }
+                if col >= WIN_W {
+                    break;
+                }
                 buf[row * buf_w + col] = color;
             }
         }
     } else {
         // Top and bottom edges
         for col in x..x + w {
-            if col >= WIN_W { break; }
-            if y < WIN_H { buf[y * buf_w + col] = color; }
+            if col >= WIN_W {
+                break;
+            }
+            if y < WIN_H {
+                buf[y * buf_w + col] = color;
+            }
             let bottom = y + h.saturating_sub(1);
-            if bottom < WIN_H { buf[bottom * buf_w + col] = color; }
+            if bottom < WIN_H {
+                buf[bottom * buf_w + col] = color;
+            }
         }
         // Left and right edges
         for row in y..y + h {
-            if row >= WIN_H { break; }
-            if x < WIN_W { buf[row * buf_w + x] = color; }
+            if row >= WIN_H {
+                break;
+            }
+            if x < WIN_W {
+                buf[row * buf_w + x] = color;
+            }
             let right = x + w.saturating_sub(1);
-            if right < WIN_W { buf[row * buf_w + right] = color; }
+            if right < WIN_W {
+                buf[row * buf_w + right] = color;
+            }
         }
     }
 }
 
-fn draw_filled_circle(buf: &mut [u32], buf_w: usize, buf_h: usize, cx: i32, cy: i32, r: i32, color: u32) {
+fn draw_filled_circle(
+    buf: &mut [u32],
+    buf_w: usize,
+    buf_h: usize,
+    cx: i32,
+    cy: i32,
+    r: i32,
+    color: u32,
+) {
     for dy in -r..=r {
         for dx in -r..=r {
             if dx * dx + dy * dy <= r * r {
@@ -322,9 +454,14 @@ fn draw_filled_circle(buf: &mut [u32], buf_w: usize, buf_h: usize, cx: i32, cy: 
 
 /// Draw a 112×112 grayscale image as a thumbnail at the given size.
 fn draw_gray_thumbnail(
-    buf: &mut [u32], buf_w: usize, buf_h: usize,
-    x: usize, y: usize,
-    data: &[u8], src_size: usize, dst_size: usize,
+    buf: &mut [u32],
+    buf_w: usize,
+    buf_h: usize,
+    x: usize,
+    y: usize,
+    data: &[u8],
+    src_size: usize,
+    dst_size: usize,
 ) {
     let scale = src_size as f32 / dst_size as f32;
     for row in 0..dst_size {
@@ -346,7 +483,15 @@ fn draw_gray_thumbnail(
 // --- Bitmap font (5×7, ASCII 32-126) ---
 
 /// Render text using an embedded 5×7 bitmap font.
-fn draw_text(buf: &mut [u32], buf_w: usize, buf_h: usize, x: usize, y: usize, text: &str, color: u32) {
+fn draw_text(
+    buf: &mut [u32],
+    buf_w: usize,
+    buf_h: usize,
+    x: usize,
+    y: usize,
+    text: &str,
+    color: u32,
+) {
     let mut cx = x;
     for ch in text.chars() {
         let idx = ch as usize;

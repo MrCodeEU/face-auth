@@ -91,8 +91,8 @@ unsafe extern "C" fn test_conv(
 ) -> c_int {
     let data = &mut *(appdata_ptr as *mut ConvData);
 
-    let responses = libc::calloc(num_msg as usize, std::mem::size_of::<PamResponse>())
-        as *mut PamResponse;
+    let responses =
+        libc::calloc(num_msg as usize, std::mem::size_of::<PamResponse>()) as *mut PamResponse;
     if responses.is_null() {
         return 1;
     }
@@ -144,11 +144,11 @@ fn main() {
     }
 
     let service = CString::new("face-auth-test-phase2").unwrap();
-    let user = CString::new(
-        std::env::var("USER").unwrap_or_else(|_| "root".to_string()),
-    ).unwrap();
+    let user = CString::new(std::env::var("USER").unwrap_or_else(|_| "root".to_string())).unwrap();
 
-    let mut conv_data = ConvData { text_info: Vec::new() };
+    let mut conv_data = ConvData {
+        text_info: Vec::new(),
+    };
     let conv = PamConv {
         conv: Some(test_conv),
         appdata_ptr: &mut conv_data as *mut ConvData as *mut c_void,
@@ -158,7 +158,10 @@ fn main() {
 
     println!("Service: face-auth-test-phase2");
     println!("User: {}", user.to_str().unwrap());
-    println!("Module: {} (full path in PAM config)\n", module_path.canonicalize().unwrap_or_default().display());
+    println!(
+        "Module: {} (full path in PAM config)\n",
+        module_path.canonicalize().unwrap_or_default().display()
+    );
 
     println!("Calling pam_authenticate...\n");
 
@@ -180,12 +183,17 @@ fn main() {
     match rc {
         PAM_SUCCESS => println!("Status: PAM_SUCCESS — face auth accepted"),
         PAM_AUTH_ERR => println!("Status: PAM_AUTH_ERR — face auth rejected (wrong face)"),
-        PAM_AUTHINFO_UNAVAIL => println!("Status: PAM_AUTHINFO_UNAVAIL — daemon unavailable (fall through to password)"),
+        PAM_AUTHINFO_UNAVAIL => {
+            println!("Status: PAM_AUTHINFO_UNAVAIL — daemon unavailable (fall through to password)")
+        }
         other => println!("Status: unknown ({other})"),
     }
 
     if !conv_data.text_info.is_empty() {
-        println!("\nFeedback messages received ({}):", conv_data.text_info.len());
+        println!(
+            "\nFeedback messages received ({}):",
+            conv_data.text_info.len()
+        );
         for msg in &conv_data.text_info {
             println!("  \"{msg}\"");
         }

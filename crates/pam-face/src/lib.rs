@@ -79,11 +79,8 @@ struct pam_conv {
 }
 
 extern "C" {
-    fn pam_get_item(
-        pamh: *const pam_handle_t,
-        item_type: c_int,
-        item: *mut *const c_void,
-    ) -> c_int;
+    fn pam_get_item(pamh: *const pam_handle_t, item_type: c_int, item: *mut *const c_void)
+        -> c_int;
 
     fn openlog(ident: *const c_char, option: c_int, facility: c_int);
     fn syslog(priority: c_int, format: *const c_char, ...);
@@ -163,7 +160,12 @@ fn send_text_info(conv: *const pam_conv, text: &str) {
         let conv_ref = &*conv;
         if let Some(conv_fn) = conv_ref.conv {
             // Best-effort: ignore errors from conv callback
-            let _ = conv_fn(1, &msg_ptr as *const _ as *mut _, &mut resp, conv_ref.appdata_ptr);
+            let _ = conv_fn(
+                1,
+                &msg_ptr as *const _ as *mut _,
+                &mut resp,
+                conv_ref.appdata_ptr,
+            );
             // Free response if allocated
             if !resp.is_null() {
                 if !(*resp).resp.is_null() {
@@ -312,9 +314,7 @@ fn do_authenticate(pamh: *mut pam_handle_t, _flags: c_int) -> c_int {
 
 /// Read random bytes via getrandom(2). Returns false on failure.
 fn getrandom(buf: &mut [u8]) -> bool {
-    let ret = unsafe {
-        libc::syscall(libc::SYS_getrandom, buf.as_mut_ptr(), buf.len(), 0u32)
-    };
+    let ret = unsafe { libc::syscall(libc::SYS_getrandom, buf.as_mut_ptr(), buf.len(), 0u32) };
     ret == buf.len() as i64
 }
 

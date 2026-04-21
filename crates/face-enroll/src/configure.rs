@@ -178,10 +178,7 @@ impl App {
 
         // Notify running daemon to reload config
         let reload_msg = notify_daemon_reload();
-        self.status = Some((
-            format!("Saved — {reload_msg}"),
-            false,
-        ));
+        self.status = Some((format!("Saved — {reload_msg}"), false));
         Ok(())
     }
 }
@@ -257,84 +254,144 @@ fn to_fields(c: &Config) -> Vec<Field> {
     }
     vec![
         f!(
-            "daemon", "session_timeout_s", "Max seconds per auth attempt",
-            Val::U64(c.daemon.session_timeout_s), Val::U64(d.daemon.session_timeout_s)
+            "daemon",
+            "session_timeout_s",
+            "Max seconds per auth attempt",
+            Val::U64(c.daemon.session_timeout_s),
+            Val::U64(d.daemon.session_timeout_s)
         ),
         f!(
-            "daemon", "idle_unload_s", "Unload models after N idle seconds (0 = keep loaded)",
-            Val::U64(c.daemon.idle_unload_s), Val::U64(d.daemon.idle_unload_s)
+            "daemon",
+            "idle_unload_s",
+            "Unload models after N idle seconds (0 = keep loaded)",
+            Val::U64(c.daemon.idle_unload_s),
+            Val::U64(d.daemon.idle_unload_s)
         ),
         f!(
-            "daemon", "execution_provider", "Inference backend: cpu / rocm / cuda / xdna",
-            Val::Str(c.daemon.execution_provider.clone()), Val::Str(d.daemon.execution_provider.clone())
+            "daemon",
+            "execution_provider",
+            "Inference backend: cpu / rocm / cuda / xdna",
+            Val::Str(c.daemon.execution_provider.clone()),
+            Val::Str(d.daemon.execution_provider.clone())
         ),
         f!(
-            "camera", "device_path", "Camera device path (empty = auto-detect IR camera)",
-            Val::Str(c.camera.device_path.clone()), Val::Str(d.camera.device_path.clone())
+            "camera",
+            "device_path",
+            "Camera device path (empty = auto-detect IR camera)",
+            Val::Str(c.camera.device_path.clone()),
+            Val::Str(d.camera.device_path.clone())
         ),
         f!(
-            "camera", "flush_frames", "Frames to discard on open (0 = none)",
-            Val::U32(c.camera.flush_frames), Val::U32(d.camera.flush_frames)
+            "camera",
+            "flush_frames",
+            "Frames to discard on open (0 = none)",
+            Val::U32(c.camera.flush_frames),
+            Val::U32(d.camera.flush_frames)
         ),
         f!(
-            "recognition", "threshold", "Cosine similarity threshold 0.0–1.0 (default 0.70)",
-            Val::F32(c.recognition.threshold), Val::F32(d.recognition.threshold)
+            "recognition",
+            "threshold",
+            "Cosine similarity threshold 0.0–1.0 (default 0.70)",
+            Val::F32(c.recognition.threshold),
+            Val::F32(d.recognition.threshold)
         ),
         f!(
-            "recognition", "frames_required", "Consecutive matching frames needed to accept",
-            Val::U32(c.recognition.frames_required), Val::U32(d.recognition.frames_required)
+            "recognition",
+            "frames_required",
+            "Consecutive matching frames needed to accept",
+            Val::U32(c.recognition.frames_required),
+            Val::U32(d.recognition.frames_required)
         ),
         f!(
-            "recognition", "max_enrollment", "Maximum face samples stored per user",
-            Val::U32(c.recognition.max_enrollment), Val::U32(d.recognition.max_enrollment)
+            "recognition",
+            "max_enrollment",
+            "Maximum face samples stored per user",
+            Val::U32(c.recognition.max_enrollment),
+            Val::U32(d.recognition.max_enrollment)
         ),
         f!(
-            "liveness", "enabled", "Enable IR texture liveness detection (anti-spoof)",
-            Val::Bool(c.liveness.enabled), Val::Bool(d.liveness.enabled)
+            "liveness",
+            "enabled",
+            "Enable IR texture liveness detection (anti-spoof)",
+            Val::Bool(c.liveness.enabled),
+            Val::Bool(d.liveness.enabled)
         ),
         f!(
-            "liveness", "lbp_entropy_min", "Min LBP entropy — real skin ~6.0, flat screens <5.0",
-            Val::F32(c.liveness.lbp_entropy_min), Val::F32(d.liveness.lbp_entropy_min)
+            "liveness",
+            "lbp_entropy_min",
+            "Min LBP entropy — real skin ~6.0, flat screens <5.0",
+            Val::F32(c.liveness.lbp_entropy_min),
+            Val::F32(d.liveness.lbp_entropy_min)
         ),
         f!(
-            "liveness", "contrast_cv_min", "Min local contrast CV — real face ~0.28",
-            Val::F32(c.liveness.local_contrast_cv_min), Val::F32(d.liveness.local_contrast_cv_min)
+            "liveness",
+            "contrast_cv_min",
+            "Min local contrast CV — real face ~0.28",
+            Val::F32(c.liveness.local_contrast_cv_min),
+            Val::F32(d.liveness.local_contrast_cv_min)
         ),
         f!(
-            "liveness", "contrast_cv_max", "Max local contrast CV — screens/photos often >0.80",
-            Val::F32(c.liveness.local_contrast_cv_max), Val::F32(d.liveness.local_contrast_cv_max)
+            "liveness",
+            "contrast_cv_max",
+            "Max local contrast CV — screens/photos often >0.80",
+            Val::F32(c.liveness.local_contrast_cv_max),
+            Val::F32(d.liveness.local_contrast_cv_max)
         ),
         f!(
-            "geometry", "distance_min", "Min face-width ratio — reports TooFar if below",
-            Val::F32(c.geometry.distance_min), Val::F32(d.geometry.distance_min)
+            "geometry",
+            "distance_min",
+            "Min face-width ratio — reports TooFar if below",
+            Val::F32(c.geometry.distance_min),
+            Val::F32(d.geometry.distance_min)
         ),
         f!(
-            "geometry", "distance_max", "Max face-width ratio — reports TooClose if above",
-            Val::F32(c.geometry.distance_max), Val::F32(d.geometry.distance_max)
+            "geometry",
+            "distance_max",
+            "Max face-width ratio — reports TooClose if above",
+            Val::F32(c.geometry.distance_max),
+            Val::F32(d.geometry.distance_max)
         ),
         f!(
-            "geometry", "yaw_max_deg", "Max horizontal turn allowed for auth (degrees)",
-            Val::F32(c.geometry.yaw_max_deg), Val::F32(d.geometry.yaw_max_deg)
+            "geometry",
+            "yaw_max_deg",
+            "Max horizontal turn allowed for auth (degrees)",
+            Val::F32(c.geometry.yaw_max_deg),
+            Val::F32(d.geometry.yaw_max_deg)
         ),
         f!(
-            "geometry", "pitch_max_deg", "Max vertical tilt allowed for auth (degrees)",
-            Val::F32(c.geometry.pitch_max_deg), Val::F32(d.geometry.pitch_max_deg)
+            "geometry",
+            "pitch_max_deg",
+            "Max vertical tilt allowed for auth (degrees)",
+            Val::F32(c.geometry.pitch_max_deg),
+            Val::F32(d.geometry.pitch_max_deg)
         ),
         f!(
-            "geometry", "roll_max_deg", "Max head roll allowed for auth (degrees)",
-            Val::F32(c.geometry.roll_max_deg), Val::F32(d.geometry.roll_max_deg)
+            "geometry",
+            "roll_max_deg",
+            "Max head roll allowed for auth (degrees)",
+            Val::F32(c.geometry.roll_max_deg),
+            Val::F32(d.geometry.roll_max_deg)
         ),
         f!(
-            "logging", "level", "Log level: error / warn / info / debug / trace",
-            Val::Str(c.logging.level.clone()), Val::Str(d.logging.level.clone())
+            "logging",
+            "level",
+            "Log level: error / warn / info / debug / trace",
+            Val::Str(c.logging.level.clone()),
+            Val::Str(d.logging.level.clone())
         ),
         f!(
-            "notify", "enabled", "Send desktop notification on successful auth",
-            Val::Bool(c.notify.enabled), Val::Bool(d.notify.enabled)
+            "notify",
+            "enabled",
+            "Send desktop notification on successful auth",
+            Val::Bool(c.notify.enabled),
+            Val::Bool(d.notify.enabled)
         ),
         f!(
-            "notify", "timeout_ms", "Notification display duration in milliseconds",
-            Val::I32(c.notify.timeout_ms), Val::I32(d.notify.timeout_ms)
+            "notify",
+            "timeout_ms",
+            "Notification display duration in milliseconds",
+            Val::I32(c.notify.timeout_ms),
+            Val::I32(d.notify.timeout_ms)
         ),
     ]
 }
@@ -351,18 +408,12 @@ fn to_config(base: &Config, fields: &[Field]) -> Config {
             ("camera", "device_path", Val::Str(v)) => c.camera.device_path = v.clone(),
             ("camera", "flush_frames", Val::U32(v)) => c.camera.flush_frames = *v,
             ("recognition", "threshold", Val::F32(v)) => c.recognition.threshold = *v,
-            ("recognition", "frames_required", Val::U32(v)) => {
-                c.recognition.frames_required = *v
-            }
+            ("recognition", "frames_required", Val::U32(v)) => c.recognition.frames_required = *v,
             ("recognition", "max_enrollment", Val::U32(v)) => c.recognition.max_enrollment = *v,
             ("liveness", "enabled", Val::Bool(v)) => c.liveness.enabled = *v,
             ("liveness", "lbp_entropy_min", Val::F32(v)) => c.liveness.lbp_entropy_min = *v,
-            ("liveness", "contrast_cv_min", Val::F32(v)) => {
-                c.liveness.local_contrast_cv_min = *v
-            }
-            ("liveness", "contrast_cv_max", Val::F32(v)) => {
-                c.liveness.local_contrast_cv_max = *v
-            }
+            ("liveness", "contrast_cv_min", Val::F32(v)) => c.liveness.local_contrast_cv_min = *v,
+            ("liveness", "contrast_cv_max", Val::F32(v)) => c.liveness.local_contrast_cv_max = *v,
             ("geometry", "distance_min", Val::F32(v)) => c.geometry.distance_min = *v,
             ("geometry", "distance_max", Val::F32(v)) => c.geometry.distance_max = *v,
             ("geometry", "yaw_max_deg", Val::F32(v)) => c.geometry.yaw_max_deg = *v,
@@ -436,10 +487,7 @@ fn run_tui(app: &mut App) -> io::Result<()> {
 
 // ---- Event loop ----
 
-fn event_loop(
-    terminal: &mut Terminal<CrosstermBackend<Stdout>>,
-    app: &mut App,
-) -> io::Result<()> {
+fn event_loop(terminal: &mut Terminal<CrosstermBackend<Stdout>>, app: &mut App) -> io::Result<()> {
     loop {
         terminal.draw(|f| draw(f, app))?;
 
@@ -510,7 +558,9 @@ fn draw_title(f: &mut Frame, app: &App, area: ratatui::layout::Rect) {
     } else {
         (
             format!(" Face Auth Configuration — {CONFIG_PATH} "),
-            Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
         )
     };
     let title = Paragraph::new(label)
@@ -521,11 +571,16 @@ fn draw_title(f: &mut Frame, app: &App, area: ratatui::layout::Rect) {
 
 fn draw_table(f: &mut Frame, app: &mut App, area: ratatui::layout::Rect) {
     let header = Row::new(vec![
-        Cell::from("Section").style(Style::default().add_modifier(Modifier::BOLD | Modifier::UNDERLINED)),
-        Cell::from("Setting").style(Style::default().add_modifier(Modifier::BOLD | Modifier::UNDERLINED)),
-        Cell::from("Value").style(Style::default().add_modifier(Modifier::BOLD | Modifier::UNDERLINED)),
-        Cell::from("Default").style(Style::default().add_modifier(Modifier::BOLD | Modifier::UNDERLINED)),
-        Cell::from("Description").style(Style::default().add_modifier(Modifier::BOLD | Modifier::UNDERLINED)),
+        Cell::from("Section")
+            .style(Style::default().add_modifier(Modifier::BOLD | Modifier::UNDERLINED)),
+        Cell::from("Setting")
+            .style(Style::default().add_modifier(Modifier::BOLD | Modifier::UNDERLINED)),
+        Cell::from("Value")
+            .style(Style::default().add_modifier(Modifier::BOLD | Modifier::UNDERLINED)),
+        Cell::from("Default")
+            .style(Style::default().add_modifier(Modifier::BOLD | Modifier::UNDERLINED)),
+        Cell::from("Description")
+            .style(Style::default().add_modifier(Modifier::BOLD | Modifier::UNDERLINED)),
     ])
     .height(1)
     .bottom_margin(1);
@@ -580,11 +635,11 @@ fn draw_table(f: &mut Frame, app: &mut App, area: ratatui::layout::Rect) {
         .collect();
 
     let widths = [
-        Constraint::Length(12),  // section
-        Constraint::Length(20),  // key
-        Constraint::Length(13),  // value
-        Constraint::Length(9),   // default
-        Constraint::Min(20),     // description
+        Constraint::Length(12), // section
+        Constraint::Length(20), // key
+        Constraint::Length(13), // value
+        Constraint::Length(9),  // default
+        Constraint::Min(20),    // description
     ];
 
     let table = Table::new(rows, widths)
@@ -608,7 +663,10 @@ fn draw_bottom(f: &mut Frame, app: &App, area: ratatui::layout::Rect) {
             .as_deref()
             .map(|e| format!("  ! {e}"))
             .unwrap_or_default();
-        let text = format!(" {} > [{}]{}  Esc=cancel  Enter=confirm", field.key, app.buf, err_suffix);
+        let text = format!(
+            " {} > [{}]{}  Esc=cancel  Enter=confirm",
+            field.key, app.buf, err_suffix
+        );
         let style = if app.err.is_some() {
             Style::default().fg(Color::Red)
         } else {

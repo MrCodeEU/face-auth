@@ -45,11 +45,12 @@ impl EnrollmentData {
         self.embeddings
             .iter()
             .map(|v| {
-                v.as_slice()
-                    .try_into()
-                    .map_err(|_| EnrollmentError::Deserialize(
-                        format!("expected 512-dim embedding, got {}", v.len()),
+                v.as_slice().try_into().map_err(|_| {
+                    EnrollmentError::Deserialize(format!(
+                        "expected 512-dim embedding, got {}",
+                        v.len()
                     ))
+                })
             })
             .collect()
     }
@@ -167,7 +168,9 @@ fn fix_enrollment_ownership(username: &str, dir: &Path) {
 /// Best-effort chown of enrollment directory tree to the target user.
 /// Uses /etc/passwd to resolve uid/gid. Silently ignores failures.
 fn chown_to_user(username: &str, dir: &Path) {
-    let Some((uid, gid)) = resolve_uid_gid(username) else { return };
+    let Some((uid, gid)) = resolve_uid_gid(username) else {
+        return;
+    };
     let _ = chown_recursive(dir, uid, gid);
     // Also chown parent (.local/share/face-auth/) so user can create new dirs later
     if let Some(parent) = dir.parent() {

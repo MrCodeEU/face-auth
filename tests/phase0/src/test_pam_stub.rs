@@ -81,8 +81,8 @@ unsafe extern "C" fn test_conv(
     let data = &mut *(appdata_ptr as *mut ConvData);
 
     // Allocate responses
-    let responses = libc::calloc(num_msg as usize, std::mem::size_of::<PamResponse>())
-        as *mut PamResponse;
+    let responses =
+        libc::calloc(num_msg as usize, std::mem::size_of::<PamResponse>()) as *mut PamResponse;
     if responses.is_null() {
         return 1; // PAM_BUF_ERR
     }
@@ -147,10 +147,7 @@ fn main() {
     }
 
     let service = CString::new("face-auth-test").unwrap();
-    let user = CString::new(
-        std::env::var("USER").unwrap_or_else(|_| "root".to_string()),
-    )
-    .unwrap();
+    let user = CString::new(std::env::var("USER").unwrap_or_else(|_| "root".to_string())).unwrap();
 
     let mut conv_data = ConvData {
         text_info_received: Vec::new(),
@@ -164,7 +161,10 @@ fn main() {
 
     let mut handle: *mut PamHandle = ptr::null_mut();
 
-    println!("Starting PAM session (service=face-auth-test, user={})...\n", user.to_str().unwrap());
+    println!(
+        "Starting PAM session (service=face-auth-test, user={})...\n",
+        user.to_str().unwrap()
+    );
 
     unsafe {
         let rc = pam_start(service.as_ptr(), user.as_ptr(), &conv, &mut handle);
@@ -182,7 +182,11 @@ fn main() {
             println!("✓ pam_authenticate succeeded");
         } else {
             let err = CStr::from_ptr(pam_strerror(handle, rc));
-            println!("✗ pam_authenticate failed: {} ({})", err.to_string_lossy(), rc);
+            println!(
+                "✗ pam_authenticate failed: {} ({})",
+                err.to_string_lossy(),
+                rc
+            );
         }
 
         pam_end(handle, rc);

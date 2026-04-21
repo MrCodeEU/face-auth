@@ -19,24 +19,41 @@ const UVC_SET_CUR: u8 = 0x01;
 
 #[repr(C)]
 struct UvcXuControlQuery {
-    unit: u8, selector: u8, query: u8, _pad1: u8,
-    size: u16, _pad2: u16, data: *mut u8,
+    unit: u8,
+    selector: u8,
+    query: u8,
+    _pad1: u8,
+    size: u16,
+    _pad2: u16,
+    data: *mut u8,
 }
 
 fn uvc_set_cur(fd: i32, unit: u8, selector: u8, data: &[u8]) -> std::io::Result<()> {
     let mut buf = data.to_vec();
     let mut req = UvcXuControlQuery {
-        unit, selector, query: UVC_SET_CUR, _pad1: 0,
-        size: buf.len() as u16, _pad2: 0, data: buf.as_mut_ptr(),
+        unit,
+        selector,
+        query: UVC_SET_CUR,
+        _pad1: 0,
+        size: buf.len() as u16,
+        _pad2: 0,
+        data: buf.as_mut_ptr(),
     };
     let ret = unsafe { libc::ioctl(fd, UVCIOC_CTRL_QUERY, &mut req as *mut _) };
-    if ret < 0 { Err(std::io::Error::last_os_error()) } else { Ok(()) }
+    if ret < 0 {
+        Err(std::io::Error::last_os_error())
+    } else {
+        Ok(())
+    }
 }
 
 fn activate_ir_emitter(fd: i32, config_path: &str) -> bool {
     let content = match std::fs::read_to_string(config_path) {
         Ok(c) => c,
-        Err(_) => { println!("  No IR config at {config_path}, skipping emitter activation"); return false; }
+        Err(_) => {
+            println!("  No IR config at {config_path}, skipping emitter activation");
+            return false;
+        }
     };
     // Minimal parse — just grab unit, selector, enable_data
     let mut unit = None;
@@ -44,33 +61,59 @@ fn activate_ir_emitter(fd: i32, config_path: &str) -> bool {
     let mut enable_data = None;
     for line in content.lines() {
         let line = line.trim();
-        if line.starts_with('#') || line.is_empty() { continue; }
+        if line.starts_with('#') || line.is_empty() {
+            continue;
+        }
         if let Some(rest) = line.strip_prefix("unit") {
-            unit = rest.trim().trim_start_matches('=').trim().parse::<u8>().ok();
+            unit = rest
+                .trim()
+                .trim_start_matches('=')
+                .trim()
+                .parse::<u8>()
+                .ok();
         } else if let Some(rest) = line.strip_prefix("selector") {
-            selector = rest.trim().trim_start_matches('=').trim().parse::<u8>().ok();
+            selector = rest
+                .trim()
+                .trim_start_matches('=')
+                .trim()
+                .parse::<u8>()
+                .ok();
         } else if let Some(rest) = line.strip_prefix("enable_data") {
-            let s = rest.trim().trim_start_matches('=').trim()
-                .trim_start_matches('[').trim_end_matches(']');
-            let bytes: Option<Vec<u8>> = s.split(',').map(|t| {
-                let t = t.trim();
-                if let Some(h) = t.strip_prefix("0x").or_else(|| t.strip_prefix("0X")) {
-                    u8::from_str_radix(h, 16).ok()
-                } else {
-                    t.parse().ok()
-                }
-            }).collect();
+            let s = rest
+                .trim()
+                .trim_start_matches('=')
+                .trim()
+                .trim_start_matches('[')
+                .trim_end_matches(']');
+            let bytes: Option<Vec<u8>> = s
+                .split(',')
+                .map(|t| {
+                    let t = t.trim();
+                    if let Some(h) = t.strip_prefix("0x").or_else(|| t.strip_prefix("0X")) {
+                        u8::from_str_radix(h, 16).ok()
+                    } else {
+                        t.parse().ok()
+                    }
+                })
+                .collect();
             enable_data = bytes;
         }
     }
     match (unit, selector, enable_data) {
-        (Some(u), Some(s), Some(d)) => {
-            match uvc_set_cur(fd, u, s, &d) {
-                Ok(()) => { println!("  ✓ IR emitter activated (unit={u}, sel={s})"); true }
-                Err(e) => { println!("  ✗ IR emitter ioctl failed: {e}"); false }
+        (Some(u), Some(s), Some(d)) => match uvc_set_cur(fd, u, s, &d) {
+            Ok(()) => {
+                println!("  ✓ IR emitter activated (unit={u}, sel={s})");
+                true
             }
+            Err(e) => {
+                println!("  ✗ IR emitter ioctl failed: {e}");
+                false
+            }
+        },
+        _ => {
+            println!("  ✗ Could not parse IR config");
+            false
         }
-        _ => { println!("  ✗ Could not parse IR config"); false }
     }
 }
 
@@ -86,8 +129,12 @@ fn detect_ir_device() -> Option<String> {
         if !Path::new(&path).exists() {
             continue;
         }
-        let Ok(dev) = Device::with_path(&path) else { continue };
-        let Ok(formats) = dev.enum_formats() else { continue };
+        let Ok(dev) = Device::with_path(&path) else {
+            continue;
+        };
+        let Ok(formats) = dev.enum_formats() else {
+            continue;
+        };
         let is_ir = formats.iter().any(|f| is_ir_fourcc(&f.fourcc));
         if is_ir {
             println!("[detect] IR camera: {path}");
@@ -97,7 +144,11 @@ fn detect_ir_device() -> Option<String> {
             return Some(path);
         } else {
             let fmt_list: Vec<_> = formats.iter().map(|f| f.fourcc.to_string()).collect();
-            let fmt_str = if fmt_list.is_empty() { "(none)".into() } else { fmt_list.join(", ") };
+            let fmt_str = if fmt_list.is_empty() {
+                "(none)".into()
+            } else {
+                fmt_list.join(", ")
+            };
             println!("[detect] {path}: not IR ({fmt_str})");
         }
     }
@@ -111,10 +162,13 @@ fn print_controls(path: &str) {
     let result = std::thread::spawn(move || {
         let dev = Device::with_path(&path_owned)?;
         dev.query_controls()
-    }).join();
+    })
+    .join();
 
     match result {
-        Err(_) => println!("  (panicked on unknown control type — camera has no standard V4L2 controls)"),
+        Err(_) => {
+            println!("  (panicked on unknown control type — camera has no standard V4L2 controls)")
+        }
         Ok(Err(e)) => println!("  (error: {e})"),
         Ok(Ok(controls)) => {
             if controls.is_empty() {
@@ -124,8 +178,13 @@ fn print_controls(path: &str) {
             for ctrl in &controls {
                 println!(
                     "  [0x{:08x}] {:40} type={:?} range=[{}, {}] step={} default={}",
-                    ctrl.id, ctrl.name, ctrl.typ,
-                    ctrl.minimum, ctrl.maximum, ctrl.step, ctrl.default,
+                    ctrl.id,
+                    ctrl.name,
+                    ctrl.typ,
+                    ctrl.minimum,
+                    ctrl.maximum,
+                    ctrl.step,
+                    ctrl.default,
                 );
             }
         }
@@ -146,8 +205,7 @@ fn capture_frame(device_path: &str, ir_config: &str) {
     // Print controls so we can spot IR emitter control
     print_controls(device_path);
 
-    let mut stream = Stream::with_buffers(&dev, Type::VideoCapture, 4)
-        .expect("create stream");
+    let mut stream = Stream::with_buffers(&dev, Type::VideoCapture, 4).expect("create stream");
 
     // Flush more frames to let IR emitter + AE settle
     println!("\nFlushing 10 frames (IR emitter + AE settle)...");
@@ -169,7 +227,10 @@ fn capture_frame(device_path: &str, ir_config: &str) {
         let data = buf[..(width * height) as usize].to_vec();
         image::GrayImage::from_raw(width, height, data).expect("build image")
     } else {
-        eprintln!("Unexpected format {}, saving first W×H bytes as gray", fmt.fourcc);
+        eprintln!(
+            "Unexpected format {}, saving first W×H bytes as gray",
+            fmt.fourcc
+        );
         let data = buf[..(width * height) as usize].to_vec();
         image::GrayImage::from_raw(width, height, data).expect("build image")
     };
@@ -189,20 +250,22 @@ fn capture_frame(device_path: &str, ir_config: &str) {
     }
 }
 
-
 fn main() {
     let args: Vec<String> = std::env::args().collect();
 
     if args.iter().any(|a| a == "--all-devices") {
         for i in 0..8 {
             let path = format!("/dev/video{}", i);
-            if !Path::new(&path).exists() { continue; }
+            if !Path::new(&path).exists() {
+                continue;
+            }
             print_controls(&path);
         }
         return;
     }
 
-    let device_path = args.iter()
+    let device_path = args
+        .iter()
         .skip(1)
         .find(|a| a.starts_with("/dev/"))
         .cloned()
@@ -222,13 +285,16 @@ fn main() {
     }
 
     // IR config: --ir-config path or default locations
-    let ir_config = args.windows(2)
+    let ir_config = args
+        .windows(2)
         .find(|w| w[0] == "--ir-config")
         .map(|w| w[1].clone())
         .unwrap_or_else(|| {
             // Check common locations
             for p in ["/etc/face-auth/ir-emitter.toml", "ir-emitter.toml"] {
-                if Path::new(p).exists() { return p.to_string(); }
+                if Path::new(p).exists() {
+                    return p.to_string();
+                }
             }
             "ir-emitter.toml".to_string()
         });

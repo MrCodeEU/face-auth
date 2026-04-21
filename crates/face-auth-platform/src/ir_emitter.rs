@@ -91,8 +91,8 @@ pub enum IrEmitterError {
 impl IrEmitterConfig {
     /// Load from /etc/face-auth/ir-emitter.toml (or given path).
     pub fn load(path: &str) -> Result<Self, IrEmitterError> {
-        let content = fs::read_to_string(path)
-            .map_err(|_| IrEmitterError::NoConfig(path.to_string()))?;
+        let content =
+            fs::read_to_string(path).map_err(|_| IrEmitterError::NoConfig(path.to_string()))?;
         Self::parse(&content)
     }
 
@@ -106,7 +106,9 @@ impl IrEmitterConfig {
 
         for line in toml.lines() {
             let line = line.trim();
-            if line.starts_with('#') || line.is_empty() { continue; }
+            if line.starts_with('#') || line.is_empty() {
+                continue;
+            }
 
             if let Some(rest) = line.strip_prefix("unit") {
                 let v = parse_int(rest).ok_or_else(|| IrEmitterError::ParseError(line.into()))?;
@@ -115,18 +117,24 @@ impl IrEmitterConfig {
                 let v = parse_int(rest).ok_or_else(|| IrEmitterError::ParseError(line.into()))?;
                 selector = Some(v as u8);
             } else if let Some(rest) = line.strip_prefix("enable_data") {
-                enable_data = Some(parse_byte_array(rest)
-                    .ok_or_else(|| IrEmitterError::ParseError(line.into()))?);
+                enable_data = Some(
+                    parse_byte_array(rest)
+                        .ok_or_else(|| IrEmitterError::ParseError(line.into()))?,
+                );
             } else if let Some(rest) = line.strip_prefix("disable_data") {
-                disable_data = Some(parse_byte_array(rest)
-                    .ok_or_else(|| IrEmitterError::ParseError(line.into()))?);
+                disable_data = Some(
+                    parse_byte_array(rest)
+                        .ok_or_else(|| IrEmitterError::ParseError(line.into()))?,
+                );
             }
         }
 
         Ok(IrEmitterConfig {
             unit: unit.ok_or_else(|| IrEmitterError::ParseError("missing 'unit'".into()))?,
-            selector: selector.ok_or_else(|| IrEmitterError::ParseError("missing 'selector'".into()))?,
-            enable_data: enable_data.ok_or_else(|| IrEmitterError::ParseError("missing 'enable_data'".into()))?,
+            selector: selector
+                .ok_or_else(|| IrEmitterError::ParseError("missing 'selector'".into()))?,
+            enable_data: enable_data
+                .ok_or_else(|| IrEmitterError::ParseError("missing 'enable_data'".into()))?,
             disable_data,
         })
     }
@@ -166,7 +174,9 @@ fn parse_byte_array(s: &str) -> Option<Vec<u8>> {
     let mut bytes = Vec::new();
     for tok in s.split(',') {
         let tok = tok.trim();
-        if tok.is_empty() { continue; }
+        if tok.is_empty() {
+            continue;
+        }
         let b = parse_int(tok)? as u8;
         bytes.push(b);
     }

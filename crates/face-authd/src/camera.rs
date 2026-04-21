@@ -41,7 +41,8 @@ impl CameraHandle {
         let dev = Device::with_path(&device_path)
             .map_err(|e| DaemonError::Camera(format!("open {device_path}: {e}")))?;
 
-        let fmt = dev.format()
+        let fmt = dev
+            .format()
             .map_err(|e| DaemonError::Camera(format!("query format: {e}")))?;
 
         tracing::info!(
@@ -83,7 +84,6 @@ impl CameraHandle {
             frame_rx: Some(rx),
         })
     }
-
 }
 
 impl Drop for CameraHandle {
@@ -175,8 +175,12 @@ fn detect_ir_camera() -> Result<String, DaemonError> {
         if !Path::new(&path).exists() {
             continue;
         }
-        let Ok(dev) = Device::with_path(&path) else { continue };
-        let Ok(formats) = dev.enum_formats() else { continue };
+        let Ok(dev) = Device::with_path(&path) else {
+            continue;
+        };
+        let Ok(formats) = dev.enum_formats() else {
+            continue;
+        };
         if formats.iter().any(|f| ir_fourccs.contains(&f.fourcc)) {
             tracing::info!(path = %path, "IR camera detected");
             return Ok(path);

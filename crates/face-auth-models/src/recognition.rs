@@ -64,8 +64,8 @@ impl FaceRecognizer {
     pub fn embed(&mut self, face: &AlignedFace) -> Result<[f32; 512], RecognitionError> {
         let input = preprocess(face);
 
-        let tensor = Tensor::from_array(input)
-            .map_err(|e| RecognitionError::Inference(e.to_string()))?;
+        let tensor =
+            Tensor::from_array(input).map_err(|e| RecognitionError::Inference(e.to_string()))?;
 
         let outputs = self
             .session
@@ -121,7 +121,13 @@ fn preprocess(face: &AlignedFace) -> Array4<f32> {
 /// CLAHE (Contrast Limited Adaptive Histogram Equalization) on grayscale image.
 /// More stable than global HE for face recognition — operates on local tiles
 /// with clipped contrast, so small crop shifts don't wildly change the output.
-pub fn clahe(data: &[u8], width: usize, height: usize, tile_size: usize, clip_limit: f32) -> Vec<u8> {
+pub fn clahe(
+    data: &[u8],
+    width: usize,
+    height: usize,
+    tile_size: usize,
+    clip_limit: f32,
+) -> Vec<u8> {
     let tiles_x = (width + tile_size - 1) / tile_size;
     let tiles_y = (height + tile_size - 1) / tile_size;
 
@@ -173,7 +179,11 @@ pub fn clahe(data: &[u8], width: usize, height: usize, tile_size: usize, clip_li
             let scale = 255.0 / (total - cdf_min).max(1.0);
 
             let map: Vec<u8> = (0..256)
-                .map(|i| ((cdf[i] as f32 - cdf_min) * scale).round().clamp(0.0, 255.0) as u8)
+                .map(|i| {
+                    ((cdf[i] as f32 - cdf_min) * scale)
+                        .round()
+                        .clamp(0.0, 255.0) as u8
+                })
                 .collect();
             tile_maps.push(map);
         }
