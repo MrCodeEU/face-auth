@@ -1,0 +1,120 @@
+name: COPR
+
+on:
+  release:
+    types: [published]
+
+env:
+  ORT_VERSION: "1.24.2"
+  ORT_URL: "https://cdn.pyke.io/0/pyke:ort-rs/ms@1.24.2/x86_64-unknown-linux-gnu.tar.lzma2"
+  CARGO_NET_OFFLINE: "1"
+
+jobs:
+  build-srpm:
+    name: Build SRPM
+    runs-on: ubuntu-latest
+    container:
+      image: fedora:43
+
+    steps:
+      - name: Install build tools
+        run: |
+          dnf install -y \
+            git curl xz rpm-build \
+            gcc clang cmake pkg-config \
+            pam-devel libv4l-devel openssl-devel \
+            fontconfig-devel dbus-devel systemd-devel \
+            selinux-policy-devel checkpolicy \
+            policycoreutils policycoreutils-python-utils \
+            copr-cli
+
+      - name: Install Rust
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+          key: cargo-vendor-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: cargo-vendor-
+
+      - name: Get version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Vendor cargo dependencies
+        run: |
+          mkdir -p vendor-dir
+          cargo vendor --locked vendor-dir
+
+      - name: Download ORT native lib
+        run: |
+          mkdir -p ort-lib
+          curl -fsSL -o ort.tar.lzma2 "$ORT_URL"
+          xz -d < ort.tar.lzma2 | tar -x -C ort-lib --wildcards '*.so*' --strip-components=1 || \
+            tar -xJf ort.tar.lzma2 -C ort-lib --wildcards '*.so*' --strip-components=1
+          echo "ORT libs extracted: $(ls ort-lib)"
+
+      - name: Create source tarball
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          PKGNAME="face-auth-${VERSION}"
+          mkdir -p "staging/${PKGNAME}"
+
+          git archive --format=tar --prefix="${PKGNAME}/" HEAD | tar -x -C staging
+
+          # Bundle vendored deps and ORT
+          cp -r vendor-dir   "staging/${PKGNAME}/vendor"
+          cp -r ort-lib      "staging/${PKGNAME}/ort"
+
+          tar czf "${PKGNAME}.tar.gz" -C staging "${PKGNAME}"
+          echo "Tarball size: $(du -sh "${PKGNAME}.tar.gz")"
+
+      - name: Build SRPM
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          mkdir -p ~/rpmbuild/{SOURCES,SPECS,SRPMS}
+
+          cp "face-auth-${VERSION}.tar.gz" ~/rpmbuild/SOURCES/
+          sed "s/^Version:.*/Version:        ${VERSION}/" packaging/face-auth.spec > ~/rpmbuild/SPECS/face-auth.spec
+
+          rpmbuild -bs ~/rpmbuild/SPECS/face-auth.spec \
+            --define "_sourcedir $(pwd)" \
+            --define "_srcrpmdir $(pwd)"
+
+          ls -lh face-auth-*.src.rpm
+
+      - name: Submit to COPR
+        env:
+          COPR_API_TOKEN: ${{ secrets.COPR_API_TOKEN }}
+        run: |
+          # Write copr-cli config
+          mkdir -p ~/.config
+          cat > ~/.config/copr << COPR_EOF
+          [copr-cli]
+          login = mrcode
+          username = mrcode
+          token = ${COPR_API_TOKEN}
+          copr_url = https://copr.fedorainfracloud.org
+          COPR_EOF
+          chmod 600 ~/.config/copr
+
+          SRPM=$(ls face-auth-*.src.rpm | head -1)
+          echo "Submitting ${SRPM} to COPR..."
+          copr-cli build mrcode/face-auth "${SRPM}"
+
+      - name: Upload SRPM artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: srpm
+          path: face-auth-*.src.rpm
