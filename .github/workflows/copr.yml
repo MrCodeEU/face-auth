@@ -1,8 +1,9 @@
 name: COPR
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - "v*"
 
 env:
   ORT_VERSION: "1.24.2"
