@@ -105,15 +105,10 @@ jobs:
         env:
           COPR_API_TOKEN: ${{ secrets.COPR_API_TOKEN }}
         run: |
-          # Write copr-cli config
+          # Write copr-cli config (printf avoids heredoc indentation issues)
           mkdir -p ~/.config
-          cat > ~/.config/copr << COPR_EOF
-          [copr-cli]
-          login = mrcode
-          username = mrcode
-          token = ${COPR_API_TOKEN}
-          copr_url = https://copr.fedorainfracloud.org
-          COPR_EOF
+          printf '[copr-cli]\nlogin = mrcode\nusername = mrcode\ntoken = %s\ncopr_url = https://copr.fedorainfracloud.org\n' \
+            "$COPR_API_TOKEN" > ~/.config/copr
           chmod 600 ~/.config/copr
 
           SRPM=$(ls face-auth-*.src.rpm | head -1)
