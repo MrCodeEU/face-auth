@@ -7,7 +7,6 @@ on:
 
 env:
   ORT_VERSION: "1.24.2"
-  ORT_URL: "https://cdn.pyke.io/0/pyke:ort-rs/ms@1.24.2/x86_64-unknown-linux-gnu.tar.lzma2"
 
 jobs:
   build-srpm:
@@ -57,13 +56,18 @@ jobs:
           mkdir -p vendor-dir
           cargo vendor --locked vendor-dir
 
-      - name: Download ORT native lib
+      - name: Build to fetch ORT native lib
+        env:
+          ORT_STRATEGY: download
         run: |
+          # Let ort-sys download and extract the ORT lib into the cargo build cache
+          cargo build --release -p face-auth-models
+          # Grab the .so from the build output
           mkdir -p ort-lib
-          curl -fsSL -o ort.tar.lzma2 "$ORT_URL"
-          xz -d < ort.tar.lzma2 | tar -x -C ort-lib --wildcards '*.so*' --strip-components=1 || \
-            tar -xJf ort.tar.lzma2 -C ort-lib --wildcards '*.so*' --strip-components=1
-          echo "ORT libs extracted: $(ls ort-lib)"
+          find target -name "libonnxruntime.so*" | while read f; do
+            cp "$f" ort-lib/
+          done
+          echo "ORT libs staged: $(ls ort-lib)"
 
       - name: Create source tarball
         run: |
