@@ -8,7 +8,6 @@ on:
 env:
   ORT_VERSION: "1.24.2"
   ORT_URL: "https://cdn.pyke.io/0/pyke:ort-rs/ms@1.24.2/x86_64-unknown-linux-gnu.tar.lzma2"
-  CARGO_NET_OFFLINE: "1"
 
 jobs:
   build-srpm:
