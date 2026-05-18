@@ -1,6 +1,7 @@
 use face_auth_core::enrollment;
 
 pub struct StatusTab {
+    username: String,
     info: Option<StatusInfo>,
 }
 
@@ -18,7 +19,7 @@ impl StatusTab {
             .or_else(|_| std::env::var("USER"))
             .unwrap_or_else(|_| "unknown".into());
         let info = Self::load(&username);
-        Self { info: Some(info) }
+        Self { username, info: Some(info) }
     }
 
     fn load(username: &str) -> StatusInfo {
@@ -42,12 +43,8 @@ impl StatusTab {
         ui.heading("Enrollment Status");
         ui.separator();
 
-        let username = std::env::var("SUDO_USER")
-            .or_else(|_| std::env::var("USER"))
-            .unwrap_or_else(|_| "unknown".into());
-
         if ui.button("Refresh").clicked() {
-            self.info = Some(Self::load(&username));
+            self.info = Some(Self::load(&self.username));
         }
 
         ui.separator();
