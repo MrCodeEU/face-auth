@@ -288,7 +288,7 @@ impl EnrollTab {
                     "Pose {}/{}: Look {}",
                     pose_idx + 1,
                     POSES.len(),
-                    POSES[pose_idx]
+                    POSES[pose_idx.min(POSES.len() - 1)]
                 ));
                 ui.label(format!(
                     "Captured for this pose: {}/{}",
@@ -355,10 +355,7 @@ impl EnrollTab {
                         self.save_embeddings(embeddings);
                     }
                     if ui.button("Re-do enrollment").clicked() {
-                        self.state = EnrollState::Idle;
-                        self.camera = None;
-                        self.worker = None;
-                        self.frame_tx = None;
+                        self.deactivate();
                     }
                 });
             }
