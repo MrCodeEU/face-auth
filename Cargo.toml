@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "crates/face-auth-core",
+    "crates/face-auth-camera",
     "crates/face-authd",
     "crates/pam-face",
     "crates/face-enroll",

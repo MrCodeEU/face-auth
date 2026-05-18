@@ -1,6 +1,7 @@
 mod configure;
 mod debug_ui;
 
+use face_auth_camera;
 use face_auth_core::config::Config;
 use face_auth_core::enrollment;
 use face_auth_core::geometry::analyze_geometry;
@@ -74,10 +75,11 @@ fn main() {
     }
 
     let debug = args.iter().any(|a| a == "--debug");
+    let append = args.iter().any(|a| a == "--append");
     if debug {
-        cmd_enroll_debug(&username);
+        cmd_enroll_debug(&username, append);
     } else {
-        cmd_enroll(&username);
+        cmd_enroll(&username, append);
     }
 }
 
@@ -94,6 +96,7 @@ fn print_usage() {
     eprintln!("  --check-config  Validate config, models, camera, enrollment");
     eprintln!("  --delete        Remove enrollment data for current user");
     eprintln!("  --status        Show enrollment status for current user");
+    eprintln!("  --append        Add embeddings to existing enrollment (keeps existing)");
     eprintln!("  --install       Configure PAM, video group, systemd, SELinux (requires root)");
     eprintln!("  --uninstall     Remove PAM config and restore backups (requires root)");
     eprintln!("  -h, --help      Show this help");
@@ -1444,7 +1447,7 @@ fn error_msg(msg: &str) {
 
 // --- Enrollment command ---
 
-fn cmd_enroll(username: &str) {
+fn cmd_enroll(username: &str, append: bool) {
     // Enrollment needs root to write to user home dirs reliably (chown after save)
     if unsafe { libc::geteuid() } != 0 {
         eprintln!("Warning: not running as root. Enrollment may fail with permission errors.");
@@ -1455,7 +1458,10 @@ fn cmd_enroll(username: &str) {
         eprintln!();
     }
 
-    println!("=== Face Enrollment ===");
+    println!(
+        "=== Face Enrollment{} ===",
+        if append { " (append)" } else { "" }
+    );
     println!("User: {username}");
     println!();
 
@@ -1503,13 +1509,50 @@ fn cmd_enroll(username: &str) {
 
     let embeddings_per_pose = 3;
     let total_target = poses.len() * embeddings_per_pose;
-    let max_target = config.recognition.max_enrollment.min(total_target as u32) as usize;
 
-    let mut all_embeddings: Vec<[f32; 512]> = Vec::new();
+    // Load existing embeddings when appending
+    let existing_embeddings: Vec<[f32; 512]> = if append {
+        match enrollment::load_embeddings(username) {
+            Ok(e) => {
+                println!("Loaded {} existing embedding(s) — appending new ones.", e.len());
+                e
+            }
+            Err(enrollment::EnrollmentError::NotFound(_)) => {
+                println!("No existing enrollment found, starting fresh.");
+                Vec::new()
+            }
+            Err(e) => {
+                eprintln!("Failed to load existing enrollment: {e}");
+                std::process::exit(1);
+            }
+        }
+    } else {
+        Vec::new()
+    };
+
+    // When appending, always capture a full session (all poses) regardless of
+    // remaining slots — the combined set may exceed max_enrollment, which is fine.
+    // When not appending, enforce the cap so fresh enrollments don't exceed it.
+    let max_target = if append {
+        total_target
+    } else {
+        let remaining =
+            (config.recognition.max_enrollment as usize).saturating_sub(existing_embeddings.len());
+        if remaining == 0 {
+            eprintln!(
+                "Max enrollment ({}) already reached. Use --delete first or --append.",
+                config.recognition.max_enrollment
+            );
+            std::process::exit(1);
+        }
+        remaining.min(total_target)
+    };
+
+    let mut new_embeddings: Vec<[f32; 512]> = Vec::new();
     let timeout_per_pose = Duration::from_secs(10);
 
     for (pose_name, pose_idx) in &poses {
-        if all_embeddings.len() >= max_target {
+        if new_embeddings.len() >= max_target {
             break;
         }
 
@@ -1536,30 +1579,40 @@ fn cmd_enroll(username: &str) {
                 captured.len(),
                 embeddings_per_pose
             );
-            all_embeddings.extend(captured);
+            new_embeddings.extend(captured);
         }
         println!();
     }
 
-    if all_embeddings.is_empty() {
+    if new_embeddings.is_empty() {
         eprintln!("No embeddings captured. Enrollment failed.");
         std::process::exit(1);
     }
 
-    if all_embeddings.len() < 5 {
+    if new_embeddings.len() < 5 {
         eprintln!(
             "Warning: only {} embeddings captured (recommended: {}). Quality may be lower.",
-            all_embeddings.len(),
+            new_embeddings.len(),
             max_target
         );
     }
 
-    // Quality scoring: reject outlier embeddings
-    let all_embeddings = score_and_filter_embeddings(all_embeddings);
+    // Quality scoring: reject outlier embeddings within the new capture only.
+    // Existing embeddings are already validated; mixing them into scoring would
+    // cause cross-condition rejection (e.g. normal-light vs dark embeddings).
+    let new_embeddings = score_and_filter_embeddings(new_embeddings);
 
-    // Save
-    match enrollment::save_embeddings(username, &all_embeddings, config.recognition.max_enrollment)
-    {
+    let mut all_embeddings = existing_embeddings;
+    all_embeddings.extend(new_embeddings);
+
+    // Save — when appending, pass actual combined count as cap so save_embeddings
+    // doesn't reject a combined set that exceeds the single-session max_enrollment.
+    let effective_max = if append {
+        all_embeddings.len() as u32
+    } else {
+        config.recognition.max_enrollment
+    };
+    match enrollment::save_embeddings(username, &all_embeddings, effective_max) {
         Ok(()) => {
             println!(
                 "Enrolled {} face models for user '{username}'.",
@@ -1771,7 +1824,7 @@ fn score_and_filter_embeddings(mut embeddings: Vec<[f32; 512]>) -> Vec<[f32; 512
 
 // --- Debug enrollment command ---
 
-fn cmd_enroll_debug(username: &str) {
+fn cmd_enroll_debug(username: &str, append: bool) {
     use debug_ui::{DebugDetection, DebugFrame, DebugWindow};
     use face_auth_models::recognition::clahe;
 
@@ -1808,10 +1861,41 @@ fn cmd_enroll_debug(username: &str) {
         ("slightly DOWN", 4),
     ];
     let embeddings_per_pose = 3;
-    let max_target = config
-        .recognition
-        .max_enrollment
-        .min((poses.len() * embeddings_per_pose) as u32) as usize;
+    let total_target = poses.len() * embeddings_per_pose;
+
+    let existing_embeddings: Vec<[f32; 512]> = if append {
+        match enrollment::load_embeddings(username) {
+            Ok(e) => {
+                println!("Loaded {} existing embedding(s) — appending new ones.", e.len());
+                e
+            }
+            Err(enrollment::EnrollmentError::NotFound(_)) => {
+                println!("No existing enrollment found, starting fresh.");
+                Vec::new()
+            }
+            Err(e) => {
+                eprintln!("Failed to load existing enrollment: {e}");
+                std::process::exit(1);
+            }
+        }
+    } else {
+        Vec::new()
+    };
+
+    let max_target = if append {
+        total_target
+    } else {
+        let remaining =
+            (config.recognition.max_enrollment as usize).saturating_sub(existing_embeddings.len());
+        if remaining == 0 {
+            eprintln!(
+                "Max enrollment ({}) already reached. Use --delete first or --append.",
+                config.recognition.max_enrollment
+            );
+            std::process::exit(1);
+        }
+        remaining.min(total_target)
+    };
 
     let mut all_embeddings: Vec<[f32; 512]> = Vec::new();
     let mut pose_idx = 0;
@@ -1969,12 +2053,20 @@ fn cmd_enroll_debug(username: &str) {
         std::process::exit(1);
     }
 
-    match enrollment::save_embeddings(username, &all_embeddings, config.recognition.max_enrollment)
-    {
+    // Prepend existing embeddings when appending (score_and_filter ran on new ones only)
+    let mut combined = existing_embeddings;
+    combined.extend(all_embeddings);
+
+    let effective_max = if append {
+        combined.len() as u32
+    } else {
+        config.recognition.max_enrollment
+    };
+    match enrollment::save_embeddings(username, &combined, effective_max) {
         Ok(()) => {
             println!(
                 "Enrolled {} face models for user '{username}'.",
-                all_embeddings.len(),
+                combined.len(),
             );
         }
         Err(e) => {
@@ -2015,170 +2107,3 @@ fn feedback_to_string(fb: &face_auth_core::protocol::FeedbackState) -> &'static 
     }
 }
 
-/// Camera access for enrollment (reuses face-authd's camera module logic).
-mod face_auth_camera {
-    use face_auth_core::config::CameraConfig;
-    use face_auth_platform::ir_emitter::IrEmitterConfig;
-    use std::path::Path;
-    use std::sync::atomic::{AtomicBool, Ordering};
-    use std::sync::mpsc;
-    use std::sync::Arc;
-    use std::time::{Duration, Instant};
-    use v4l::buffer::Type;
-    use v4l::io::mmap::Stream;
-    use v4l::io::traits::CaptureStream;
-    use v4l::video::Capture;
-    use v4l::{Device, FourCC};
-
-    #[allow(dead_code)]
-    pub struct Frame {
-        pub data: Vec<u8>,
-        pub width: u32,
-        pub height: u32,
-        pub timestamp: Instant,
-    }
-
-    pub struct CameraHandle {
-        frame_rx: mpsc::Receiver<Arc<Frame>>,
-        stop: Arc<AtomicBool>,
-        thread: Option<std::thread::JoinHandle<()>>,
-    }
-
-    impl CameraHandle {
-        pub fn recv_frame_timeout(&self, timeout: Duration) -> Option<Arc<Frame>> {
-            self.frame_rx.recv_timeout(timeout).ok()
-        }
-    }
-
-    impl Drop for CameraHandle {
-        fn drop(&mut self) {
-            self.stop.store(true, Ordering::Relaxed);
-            if let Some(t) = self.thread.take() {
-                let _ = t.join();
-            }
-        }
-    }
-
-    pub fn open_camera(config: &CameraConfig) -> Result<CameraHandle, String> {
-        let device_path = if config.device_path.is_empty() {
-            detect_ir_camera()?
-        } else {
-            config.device_path.clone()
-        };
-
-        let dev =
-            Device::with_path(&device_path).map_err(|e| format!("open {device_path}: {e}"))?;
-
-        let fmt = dev.format().map_err(|e| format!("get format: {e}"))?;
-        let width = fmt.width;
-        let height = fmt.height;
-
-        tracing::info!(path = %device_path, width, height, "camera opened for enrollment");
-
-        // Activate IR emitter
-        let fd = dev.handle().fd();
-        let ir_config = load_ir_config();
-        if let Some(ref cfg) = ir_config {
-            match cfg.activate(fd) {
-                Ok(()) => tracing::info!("IR emitter activated"),
-                Err(e) => tracing::warn!("IR emitter activation failed: {e}"),
-            }
-        }
-
-        let (tx, rx) = mpsc::sync_channel::<Arc<Frame>>(3);
-        let stop = Arc::new(AtomicBool::new(false));
-        let stop_clone = stop.clone();
-        let flush_frames = config.flush_frames;
-
-        let thread = std::thread::Builder::new()
-            .name("enroll-camera".into())
-            .spawn(move || {
-                let fd = dev.handle().fd();
-                let mut stream = match Stream::with_buffers(&dev, Type::VideoCapture, 4) {
-                    Ok(s) => s,
-                    Err(e) => {
-                        tracing::error!("stream error: {e}");
-                        deactivate_emitter(&ir_config, fd);
-                        return;
-                    }
-                };
-
-                // Flush initial frames
-                for _ in 0..flush_frames {
-                    if stop_clone.load(Ordering::Relaxed) {
-                        break;
-                    }
-                    let _ = stream.next();
-                }
-
-                while !stop_clone.load(Ordering::Relaxed) {
-                    let (buf, _meta) = match stream.next() {
-                        Ok(f) => f,
-                        Err(_) => continue,
-                    };
-
-                    let frame = Arc::new(Frame {
-                        data: buf[..(width * height) as usize].to_vec(),
-                        width,
-                        height,
-                        timestamp: Instant::now(),
-                    });
-
-                    let _ = tx.try_send(frame);
-                }
-
-                drop(stream);
-                deactivate_emitter(&ir_config, fd);
-            })
-            .map_err(|e| format!("spawn camera thread: {e}"))?;
-
-        Ok(CameraHandle {
-            frame_rx: rx,
-            stop,
-            thread: Some(thread),
-        })
-    }
-
-    fn deactivate_emitter(ir_config: &Option<IrEmitterConfig>, fd: std::os::fd::RawFd) {
-        if let Some(ref cfg) = ir_config {
-            let _ = cfg.deactivate(fd);
-        }
-    }
-
-    fn detect_ir_camera() -> Result<String, String> {
-        let ir_fourccs = [
-            FourCC::new(b"GREY"),
-            FourCC::new(b"Y800"),
-            FourCC::new(b"BA81"),
-        ];
-
-        for i in 0..8 {
-            let path = format!("/dev/video{i}");
-            if !Path::new(&path).exists() {
-                continue;
-            }
-            let Ok(dev) = Device::with_path(&path) else {
-                continue;
-            };
-            let Ok(formats) = dev.enum_formats() else {
-                continue;
-            };
-            if formats.iter().any(|f| ir_fourccs.contains(&f.fourcc)) {
-                return Ok(path);
-            }
-        }
-        Err("no IR camera found".into())
-    }
-
-    fn load_ir_config() -> Option<IrEmitterConfig> {
-        for path in ["ir-emitter.toml", "/etc/face-auth/ir-emitter.toml"] {
-            if Path::new(path).exists() {
-                match IrEmitterConfig::load(path) {
-                    Ok(cfg) => return Some(cfg),
-                    Err(e) => tracing::warn!(path, "IR config parse error: {e}"),
-                }
-            }
-        }
-        None
-    }
-}

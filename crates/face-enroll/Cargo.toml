@@ -10,6 +10,7 @@ path = "src/main.rs"
 
 [dependencies]
 face-auth-core     = { path = "../face-auth-core" }
+face-auth-camera   = { path = "../face-auth-camera" }
 face-auth-models   = { path = "../face-auth-models" }
 face-auth-platform = { path = "../face-auth-platform" }
 libc               = { workspace = true }

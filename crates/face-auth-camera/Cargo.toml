@@ -1,0 +1,11 @@
+[package]
+name        = "face-auth-camera"
+version     = "0.1.0"
+edition     = "2021"
+description = "IR camera capture shared between face-enroll and face-auth-gui"
+
+[dependencies]
+face-auth-core     = { path = "../face-auth-core" }
+face-auth-platform = { path = "../face-auth-platform" }
+tracing            = { workspace = true }
+v4l                = "0.14"
