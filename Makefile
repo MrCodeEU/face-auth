@@ -35,13 +35,14 @@ INSTALL     ?= install
 # Binary names
 DAEMON      := face-authd
 ENROLL      := face-enroll
+GUI         := face-auth-gui
 PAM_MODULE  := libpam_face.so
 PAM_TARGET  := pam_face.so
 
 .PHONY: release install uninstall reinstall clean
 
 release:
-	$(CARGO) build --release -p face-authd -p face-enroll -p pam-face
+	$(CARGO) build --release -p face-authd -p face-enroll -p pam-face -p face-auth-gui
 
 install:
 	@test -f target/release/$(DAEMON) || { echo "Run 'make release' first (without sudo)"; exit 1; }
@@ -56,6 +57,7 @@ endif
 	$(INSTALL) -d $(DESTDIR)$(LIBEXECDIR)
 	$(INSTALL) -Dm755 target/release/$(DAEMON)     $(DESTDIR)$(LIBEXECDIR)/$(DAEMON)
 	$(INSTALL) -Dm755 target/release/$(ENROLL)      $(DESTDIR)$(LIBEXECDIR)/$(ENROLL)
+	$(INSTALL) -Dm755 target/release/$(GUI)         $(DESTDIR)$(LIBEXECDIR)/$(GUI)
 	# PAM module
 	$(INSTALL) -d $(DESTDIR)$(PAMDIR)
 	$(INSTALL) -Dm755 target/release/$(PAM_MODULE)  $(DESTDIR)$(PAMDIR)/$(PAM_TARGET)
@@ -63,6 +65,7 @@ endif
 	@if command -v chcon >/dev/null 2>&1; then \
 		chcon -t bin_t $(DESTDIR)$(LIBEXECDIR)/$(DAEMON) 2>/dev/null || true; \
 		chcon -t bin_t $(DESTDIR)$(LIBEXECDIR)/$(ENROLL) 2>/dev/null || true; \
+		chcon -t bin_t $(DESTDIR)$(LIBEXECDIR)/$(GUI) 2>/dev/null || true; \
 		chcon -t lib_t $(DESTDIR)$(PAMDIR)/$(PAM_TARGET) 2>/dev/null || true; \
 	fi
 	# ONNX models
@@ -95,9 +98,17 @@ endif
 	$(INSTALL) -Dm755 scripts/install.sh                     $(DESTDIR)$(DATADIR)/scripts/
 	$(INSTALL) -Dm755 scripts/uninstall.sh                   $(DESTDIR)$(DATADIR)/scripts/
 ifeq ($(ATOMIC),0)
-	# Convenience symlink (traditional systems only)
+	# Convenience symlinks (traditional systems only)
 	@ln -sf $(LIBEXECDIR)/$(ENROLL) $(DESTDIR)$(PREFIX)/bin/$(ENROLL) 2>/dev/null || true
+	@ln -sf $(LIBEXECDIR)/$(GUI) $(DESTDIR)$(PREFIX)/bin/$(GUI) 2>/dev/null || true
 endif
+	# Reload systemd unit files and restart daemon if already running
+	@if command -v systemctl >/dev/null 2>&1; then \
+		systemctl daemon-reload 2>/dev/null || true; \
+		if systemctl is-active --quiet face-authd.service 2>/dev/null; then \
+			systemctl restart face-authd.service 2>/dev/null && echo "  Daemon restarted" || true; \
+		fi; \
+	fi
 	@echo ""
 	@echo "=== Install complete ==="
 	@echo "Binaries:   $(LIBEXECDIR)/"
