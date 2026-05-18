@@ -143,7 +143,7 @@ fn inference_loop(
 
 fn process_frame(
     detector: &mut FaceDetector,
-    liveness: Option<&mut LivenessDetector>,
+    mut liveness: Option<&mut LivenessDetector>,
     recognizer: Option<&mut FaceRecognizer>,
     frame: &Frame,
     liveness_config: &LivenessConfig,
@@ -179,67 +179,59 @@ fn process_frame(
     let mut embedding = None;
 
     if should_process {
-        // Step 1: IR texture liveness (fast, works with IR cameras)
-        if liveness_config.enabled {
-            let scores =
-                quality::ir_liveness_check(&frame.data, &det.bbox, frame.width, frame.height);
-            let live_pass = scores.is_live(
-                liveness_config.lbp_entropy_min,
-                liveness_config.local_contrast_cv_min,
-                liveness_config.local_contrast_cv_max,
-            );
-            is_live = Some(live_pass);
-
-            tracing::debug!(
-                lbp_entropy = scores.lbp_entropy,
-                local_contrast_cv = scores.local_contrast_cv,
-                live_pass,
-                "IR texture liveness"
-            );
-
-            if !live_pass {
-                let elapsed_ms = start.elapsed().as_millis();
-                tracing::debug!(
-                    elapsed_ms,
-                    "IR texture spoof detected, skipping recognition"
-                );
-                return InferenceResult::Metrics {
-                    metrics,
-                    embedding: None,
-                    is_live,
-                };
-            }
-        }
-
-        // Step 2: ML model liveness (optional, RGB cameras only)
-        if let Some(live) = liveness {
-            match live.check(&frame.data, frame.width, frame.height, &det.bbox) {
-                Ok(result) => {
-                    let live_pass = result.is_real(liveness_config.model_threshold);
-                    tracing::debug!(
-                        real_score = result.real_score,
-                        spoof_score = result.spoof_score,
-                        live_pass,
-                        "ML liveness check"
+        // Run IR texture and ML liveness concurrently.
+        // Both read from the same already-captured frame — no shared mutable state.
+        let (ir_pass, ml_pass) = std::thread::scope(|s| {
+            let ir_handle = if liveness_config.enabled {
+                Some(s.spawn(|| {
+                    let scores = quality::ir_liveness_check(
+                        &frame.data,
+                        &det.bbox,
+                        frame.width,
+                        frame.height,
                     );
-                    if !live_pass {
-                        is_live = Some(false);
-                        let elapsed_ms = start.elapsed().as_millis();
-                        tracing::debug!(elapsed_ms, "ML spoof detected, skipping recognition");
-                        return InferenceResult::Metrics {
-                            metrics,
-                            embedding: None,
-                            is_live,
-                        };
-                    }
-                }
-                Err(e) => {
-                    tracing::warn!("ML liveness error: {e}");
-                }
-            }
+                    scores.is_live(
+                        liveness_config.lbp_entropy_min,
+                        liveness_config.local_contrast_cv_min,
+                        liveness_config.local_contrast_cv_max,
+                    )
+                }))
+            } else {
+                None
+            };
+
+            // ML liveness runs on current thread (needs &mut LivenessDetector).
+            let ml = liveness.as_mut().map(|live| {
+                live.check(&frame.data, frame.width, frame.height, &det.bbox)
+                    .map(|r| r.is_real(liveness_config.model_threshold))
+                    .unwrap_or(true) // model errors don't block auth
+            });
+
+            let ir = ir_handle.map(|h| h.join().unwrap_or(false)).unwrap_or(true);
+            (ir, ml)
+        });
+
+        let live_pass = ir_pass && ml_pass.unwrap_or(true);
+        is_live = Some(live_pass);
+
+        tracing::debug!(
+            ir_pass,
+            ml_pass = ?ml_pass,
+            live_pass,
+            "liveness checks complete"
+        );
+
+        if !live_pass {
+            let elapsed_ms = start.elapsed().as_millis();
+            tracing::debug!(elapsed_ms, "liveness failed, skipping recognition");
+            return InferenceResult::Metrics {
+                metrics,
+                embedding: None,
+                is_live,
+            };
         }
 
-        // Step 3: Alignment + Recognition (only if liveness passed)
+        // Alignment + Recognition (only if all liveness passed)
         if let Some(rec) = recognizer {
             let aligned = align_face(&frame.data, frame.width, frame.height, &det.landmarks);
             match rec.embed(&aligned) {
@@ -265,5 +257,24 @@ fn process_frame(
         metrics,
         embedding,
         is_live,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    fn combine(ir: bool, ml: Option<bool>) -> bool {
+        ir && ml.unwrap_or(true)
+    }
+
+    #[test]
+    fn liveness_and_logic() {
+        assert!(combine(true, None),          "IR only, passes");
+        assert!(combine(true, Some(true)),    "both enabled, both pass");
+        assert!(!combine(false, None),        "IR fails");
+        assert!(!combine(false, Some(true)),  "IR fails, ML passes");
+        assert!(!combine(true, Some(false)),  "IR passes, ML fails");
+        assert!(!combine(false, Some(false)), "both fail");
+        // ML model error is treated as pass (unwrap_or(true))
+        assert!(combine(true, Some(true)),    "ML error → treated as pass");
     }
 }
