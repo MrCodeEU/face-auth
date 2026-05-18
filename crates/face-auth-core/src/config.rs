@@ -34,11 +34,27 @@ pub struct DaemonConfig {
     pub execution_provider: String,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct CameraConfig {
     pub device_path: String,
     pub flush_frames: u32,
+    /// Fraction of frame width to keep from the left (0.0–1.0, default 1.0 = full frame).
+    /// Use to exclude hardware artifacts on the right side of the sensor.
+    /// Example: 0.65 discards the right 35%.
+    #[serde(default = "default_crop_right_fraction")]
+    pub crop_right_fraction: f32,
+}
+
+impl CameraConfig {
+    /// Compute cropped width in pixels (clamped to at least 1).
+    pub fn crop_width(&self, native_width: u32) -> u32 {
+        if self.crop_right_fraction >= 1.0 {
+            native_width
+        } else {
+            ((native_width as f32 * self.crop_right_fraction) as u32).max(1)
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -188,6 +204,20 @@ impl Config {
     /// Load from the default system path `/etc/face-auth/config.toml`.
     pub fn load_system() -> Result<Self, ConfigError> {
         Self::load(Path::new("/etc/face-auth/config.toml"))
+    }
+}
+
+fn default_crop_right_fraction() -> f32 {
+    1.0
+}
+
+impl Default for CameraConfig {
+    fn default() -> Self {
+        Self {
+            device_path: String::new(),
+            flush_frames: 0,
+            crop_right_fraction: 1.0,
+        }
     }
 }
 

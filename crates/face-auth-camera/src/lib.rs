@@ -71,6 +71,11 @@ pub fn open_camera(config: &CameraConfig) -> Result<CameraHandle, String> {
         }
     }
 
+    let crop_w = config.crop_width(width);
+    if crop_w < width {
+        tracing::info!(native_width = width, crop_width = crop_w, "frame crop active");
+    }
+
     let (tx, rx) = mpsc::sync_channel::<Arc<Frame>>(3);
     let stop = Arc::new(AtomicBool::new(false));
     let stop_clone = stop.clone();
@@ -103,9 +108,20 @@ pub fn open_camera(config: &CameraConfig) -> Result<CameraHandle, String> {
                     Err(_) => continue,
                 };
 
+                let data = if crop_w < width {
+                    let mut cropped = Vec::with_capacity((crop_w * height) as usize);
+                    for row in 0..height {
+                        let start = (row * width) as usize;
+                        cropped.extend_from_slice(&buf[start..start + crop_w as usize]);
+                    }
+                    cropped
+                } else {
+                    buf[..(width * height) as usize].to_vec()
+                };
+
                 let frame = Arc::new(Frame {
-                    data: buf[..(width * height) as usize].to_vec(),
-                    width,
+                    data,
+                    width: crop_w,
                     height,
                     timestamp: Instant::now(),
                 });

@@ -15,8 +15,10 @@ max_concurrent    = 1           # one auth session at a time
 execution_provider = "cpu"      # "cpu", "rocm" (AMD GPU), "cuda" (NVIDIA), "xdna" (AMD NPU)
 
 [camera]
-device_path  = ""               # empty = auto-detect IR camera
-flush_frames = 0                # no flush — pipeline rejects bad frames naturally
+device_path         = ""        # empty = auto-detect IR camera
+flush_frames        = 0         # no flush — pipeline rejects bad frames naturally
+# crop_right_fraction = 1.0    # set <1.0 to discard right portion of frame (e.g. 0.65)
+                                # use if your sensor has a hardware artifact on the right side
 
 [recognition]
 model          = "arcface_r50"

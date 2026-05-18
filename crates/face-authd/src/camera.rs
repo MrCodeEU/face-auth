@@ -67,14 +67,19 @@ impl CameraHandle {
         }
 
         let flush_count = config.flush_frames;
+        let crop_w = config.crop_width(width);
         let stop_flag = Arc::new(AtomicBool::new(false));
         let stop = stop_flag.clone();
         let (tx, rx) = std::sync::mpsc::sync_channel::<Arc<Frame>>(3);
 
+        if crop_w < width {
+            tracing::info!(native_width = width, crop_width = crop_w, "frame crop active");
+        }
+
         let capture_thread = std::thread::Builder::new()
             .name("camera-capture".into())
             .spawn(move || {
-                capture_loop(dev, width, height, flush_count, ir_config, stop, tx);
+                capture_loop(dev, width, height, crop_w, flush_count, ir_config, stop, tx);
             })
             .map_err(|e| DaemonError::Camera(format!("spawn capture thread: {e}")))?;
 
@@ -99,6 +104,7 @@ fn capture_loop(
     dev: Device,
     width: u32,
     height: u32,
+    crop_w: u32,
     flush_count: u32,
     ir_config: Option<IrEmitterConfig>,
     stop: Arc<AtomicBool>,
@@ -137,9 +143,21 @@ fn capture_loop(
             }
         };
 
+        let data = if crop_w < width {
+            // Keep only the left crop_w pixels of each row
+            let mut cropped = Vec::with_capacity((crop_w * height) as usize);
+            for row in 0..height {
+                let start = (row * width) as usize;
+                cropped.extend_from_slice(&buf[start..start + crop_w as usize]);
+            }
+            cropped
+        } else {
+            buf[..(width * height) as usize].to_vec()
+        };
+
         let frame = Arc::new(Frame {
-            data: buf[..(width * height) as usize].to_vec(),
-            width,
+            data,
+            width: crop_w,
             height,
             timestamp: Instant::now(),
         });
