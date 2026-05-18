@@ -81,7 +81,9 @@ impl FaceAuthApp {
             Tab::ReEnroll => self.re_enroll_tab.deactivate(),
             Tab::TestCamera => self.test_camera_tab.deactivate(),
             Tab::TestAuth => self.test_auth_tab.deactivate(),
-            _ => {}
+            // These tabs are stateless for now; explicit match ensures
+            // the compiler forces a review here if new variants are added.
+            Tab::Status | Tab::CheckConfig | Tab::Configure => {}
         }
         self.active_tab = new_tab;
     }

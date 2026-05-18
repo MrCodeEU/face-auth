@@ -24,5 +24,5 @@ fn main() {
         options,
         Box::new(|_cc| Ok(Box::new(app::FaceAuthApp::new()))),
     )
-    .expect("eframe failed to start");
+    .expect("failed to initialize eframe window — check display server and GPU drivers");
 }
