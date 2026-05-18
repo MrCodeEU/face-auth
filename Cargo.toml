@@ -8,6 +8,7 @@ members = [
     "crates/face-enroll",
     "crates/face-auth-platform",
     "crates/face-auth-models",
+    "crates/face-auth-gui",
     "tests/phase0",
 ]
 

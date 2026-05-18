@@ -1,0 +1,19 @@
+[package]
+name        = "face-auth-gui"
+version     = "0.1.0"
+edition     = "2021"
+description = "Graphical enrollment and management tool for face-auth"
+
+[[bin]]
+name = "face-auth-gui"
+path = "src/main.rs"
+
+[dependencies]
+face-auth-core    = { path = "../face-auth-core" }
+face-auth-models  = { path = "../face-auth-models" }
+face-auth-camera  = { path = "../face-auth-camera" }
+eframe            = "0.34"
+egui              = "0.34"
+libc              = { workspace = true }
+tracing           = { workspace = true }
+tracing-subscriber = { workspace = true }
