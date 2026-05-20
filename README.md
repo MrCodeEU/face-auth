@@ -12,7 +12,7 @@ Works with KDE Plasma lock screen, `sudo`, `polkit`, and any PAM-integrated serv
 - **Fast** — 0.4–1.3s typical auth time; models stay loaded for instant sudo
 - **PAM integration** — drop-in for any `/etc/pam.d/` service
 - **Live feedback** — tells you to move closer, tilt less, look at camera
-- **CLAHE preprocessing** — robust to varying IR illumination
+- **Multi-condition enrollment** — `--append` to add dark/glasses/etc. embeddings alongside existing
 - **Hot-reload config** — `SIGHUP` the daemon to apply config changes live
 
 ## Hardware Requirements
@@ -68,6 +68,7 @@ captures multiple angles and shows a quality grade (A/B/C/F) when done.
 
 ```
 face-enroll                    Enroll face (multi-angle, quality-gated)
+face-enroll --append           Add embeddings to existing enrollment (dark, glasses, etc.)
 face-enroll --test-auth        Test auth against live daemon
 face-enroll --test-auth --debug  Auth with debug overlay window
 face-enroll --configure        Interactive TUI config editor

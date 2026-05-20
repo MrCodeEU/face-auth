@@ -377,6 +377,39 @@ polkit-1 template: standard system-auth delegate with pam_face.so prepended.
 On uninstall: phase 2 (strip pam_face.so lines from all PAM files) cleans it correctly;
 polkit-1 remains as a valid system-auth delegate — no deletion needed.
 
+## Post-Phase 8 Improvements
+
+### Illumination normalization — attempted and reverted
+
+**Problem:** Enrolling in normal ambient light then authenticating in dark (or vice versa)
+produced cosine similarities below threshold. IR LEDs from camera direction create frontal
+shadows (bright forehead/nose, dark eye sockets) vs. diffuse ambient light at enrollment.
+
+**Attempted:** Gaussian high-pass filter before CLAHE (`pixel - blur(pixel, σ) + 128`).
+Tried σ=3.0 and σ=15.0.
+
+**Result: reverted.** Both sigma values degraded same-condition embedding quality severely
+— avg inter-similarity dropped from ~0.87 to ~0.67, suggested threshold dropped from 0.70
+to 0.40. ArcFace (w600k_mbf) was trained without any high-pass preprocessing; shifting
+image statistics away from training distribution destabilized embeddings across poses.
+The illumination problem cannot be solved this way without retraining the model.
+
+**Actual solution: `--append` flag** (multi-condition enrollment). Enroll once in normal
+light, once in dark — both embedding sets stored. Auth uses max cosine similarity across
+all stored embeddings, so it matches whichever condition the current frame is closest to.
+
+### Multi-condition enrollment — `--append` flag
+
+**Decision:** Added `--append` to `face-enroll` (and `--debug` variant). When set: loads
+existing embeddings, captures new ones to fill remaining `max_enrollment` slots, runs
+`score_and_filter_embeddings` on **new captures only** (running it on a combined normal-light +
+dark set would incorrectly reject cross-condition embeddings via pairwise cosine threshold),
+then merges and saves.
+
+Use cases: dark vs. normal light, glasses vs. no glasses, beard growth, seasonal IR response
+changes. Auth matching already uses `max` cosine similarity over all stored embeddings, so
+adding more conditions only improves coverage with no change to the matching logic.
+
 ### KDE lockscreen — no PAM_TEXT_INFO feedback
 
 kscreenlocker silently drops PAM `PAM_TEXT_INFO` conversation messages. Auth still works

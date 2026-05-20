@@ -98,7 +98,7 @@ impl FaceRecognizer {
 /// Since IR is grayscale, replicate to 3 channels.
 /// MobileFaceNet w600k normalization: (pixel - 127.5) / 127.5
 ///
-/// Applies histogram equalization first to normalize brightness/contrast,
+/// Applies CLAHE first to normalize brightness/contrast,
 /// making embeddings robust across different lighting conditions.
 fn preprocess(face: &AlignedFace) -> Array4<f32> {
     // CLAHE: 8×8 tiles, clip_limit=2.0 — stable across lighting/framing changes

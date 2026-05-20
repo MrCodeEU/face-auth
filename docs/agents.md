@@ -56,7 +56,7 @@ face-enroll (CLI tool)
 6. **Face alignment** — 5-point similarity transform to 112×112 canonical crop
 7. **CLAHE preprocessing** — contrast-limited adaptive histogram equalization
 8. **ArcFace MobileFaceNet w600k** (13MB) — 512-dim L2-normalized embedding
-9. **Cosine similarity matching** — against stored enrollment embeddings
+9. **Cosine similarity matching** — against stored enrollment embeddings (max over all embeddings)
 
 ## Performance (as of Phase 7)
 
@@ -80,6 +80,7 @@ face-enroll (CLI tool)
 - IR liveness: texture analysis, not ML (RGB-trained models don't work on IR)
 - CLAHE on aligned face before ArcFace (lighting invariance)
 - High-confidence shortcut: sim ≥ threshold+0.10 → accept on 1 frame
+- Multi-condition enrollment: `--append` flag adds embeddings without replacing existing ones
 
 ## PAM Configuration
 
@@ -93,6 +94,7 @@ face-enroll (CLI tool)
 | Command | Description |
 |---------|-------------|
 | `face-enroll` | Enroll face (multi-angle, quality-gated, with auto-threshold suggestion) |
+| `face-enroll --append` | Add embeddings to existing enrollment (keep existing + capture new) |
 | `face-enroll --test-auth` | Run one auth attempt against live daemon |
 | `face-enroll --test-auth --debug` | Auth with live debug window (bbox, landmarks, similarity, crops) |
 | `face-enroll --debug` | Enrollment with debug window |

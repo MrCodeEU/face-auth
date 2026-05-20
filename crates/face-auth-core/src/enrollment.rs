@@ -18,7 +18,7 @@ pub enum EnrollmentError {
 
 /// Current enrollment format version. Bump when preprocessing pipeline changes
 /// (e.g., adding CLAHE, changing normalization) to detect stale embeddings.
-pub const ENROLLMENT_VERSION: u32 = 2;
+pub const ENROLLMENT_VERSION: u32 = 5;
 
 /// On-disk format uses Vec<Vec<f32>> since serde doesn't support [f32; 512].
 #[derive(Serialize, Deserialize)]
