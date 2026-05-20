@@ -125,7 +125,7 @@ impl eframe::App for FaceAuthApp {
                 Tab::Status => self.status_tab.ui(ui),
                 Tab::TestAuth => self.test_auth_tab.ui(ui, &ctx, &self.config),
                 Tab::CheckConfig => self.check_config_tab.ui(ui),
-                Tab::Configure => self.configure_tab.ui(ui, &self.config),
+                Tab::Configure => self.configure_tab.ui(ui, &mut self.config),
                 Tab::TestCamera => self.test_camera_tab.ui(ui, &ctx, &self.config),
             }
         });

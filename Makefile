@@ -17,6 +17,8 @@ ifeq ($(ATOMIC),1)
   LIBEXECDIR  ?= $(INSTALLDIR)/bin
   PAMDIR      ?= $(INSTALLDIR)
   DATADIR     ?= $(INSTALLDIR)
+  APPSDIR     ?= /usr/local/share/applications
+  ICONDIR     ?= /usr/local/share/icons/hicolor/scalable/apps
 else
   # Traditional: standard FHS paths
   PREFIX      ?= /usr
@@ -24,6 +26,8 @@ else
   LIBEXECDIR  ?= $(PREFIX)/libexec
   PAMDIR      ?= $(PREFIX)/lib64/security
   DATADIR     ?= $(PREFIX)/share/face-auth
+  APPSDIR     ?= $(PREFIX)/share/applications
+  ICONDIR     ?= $(PREFIX)/share/icons/hicolor/scalable/apps
 endif
 
 SYSCONFDIR  ?= /etc
@@ -102,6 +106,14 @@ ifeq ($(ATOMIC),0)
 	@ln -sf $(LIBEXECDIR)/$(ENROLL) $(DESTDIR)$(PREFIX)/bin/$(ENROLL) 2>/dev/null || true
 	@ln -sf $(LIBEXECDIR)/$(GUI) $(DESTDIR)$(PREFIX)/bin/$(GUI) 2>/dev/null || true
 endif
+	# Desktop entry + icon (app launcher integration)
+	$(INSTALL) -d $(DESTDIR)$(APPSDIR)
+	$(INSTALL) -Dm644 platform/face-auth-gui.desktop $(DESTDIR)$(APPSDIR)/face-auth-gui.desktop
+	@sed -i 's|Exec=.*|Exec=$(LIBEXECDIR)/$(GUI)|' $(DESTDIR)$(APPSDIR)/face-auth-gui.desktop
+	$(INSTALL) -d $(DESTDIR)$(ICONDIR)
+	$(INSTALL) -Dm644 platform/face-auth.svg $(DESTDIR)$(ICONDIR)/face-auth.svg
+	@update-desktop-database $(DESTDIR)$(APPSDIR) 2>/dev/null || true
+	@gtk-update-icon-cache -f -t $(DESTDIR)$(ICONDIR)/../../.. 2>/dev/null || true
 	# Reload systemd unit files and restart daemon if already running
 	@if command -v systemctl >/dev/null 2>&1; then \
 		systemctl daemon-reload 2>/dev/null || true; \
@@ -114,6 +126,7 @@ endif
 	@echo "Binaries:   $(LIBEXECDIR)/"
 	@echo "PAM module: $(PAMDIR)/$(PAM_TARGET)"
 	@echo "Config:     $(SYSCONFDIR)/face-auth/config.toml"
+	@echo "Desktop:    $(APPSDIR)/face-auth-gui.desktop"
 	@echo ""
 	@echo "Next: sudo $(DATADIR)/scripts/install.sh"
 

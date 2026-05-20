@@ -25,14 +25,12 @@ pub fn upload_frame(
 }
 
 /// Render a texture handle into the current UI, scaled to fit available width.
-pub fn show_texture(ui: &mut egui::Ui, texture: &egui::TextureHandle, native_w: u32, native_h: u32) {
+/// Returns the egui Response so callers can read `.rect` for overlay drawing.
+pub fn show_texture(ui: &mut egui::Ui, texture: &egui::TextureHandle, native_w: u32, native_h: u32) -> egui::Response {
     let available_w = ui.available_width();
-    if available_w <= 0.0 || native_w == 0 {
-        return;
-    }
-    let scale = available_w / native_w as f32;
+    let scale = if available_w > 0.0 && native_w > 0 { available_w / native_w as f32 } else { 1.0 };
     let display_size = egui::Vec2::new(available_w, native_h as f32 * scale);
-    ui.image(egui::load::SizedTexture::new(texture.id(), display_size));
+    ui.image(egui::load::SizedTexture::new(texture.id(), display_size))
 }
 
 #[cfg(test)]

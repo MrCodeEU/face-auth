@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Face Auth
+Comment=Manage facial recognition authentication
+Exec=/usr/libexec/face-auth-gui
+Icon=face-auth
+Type=Application
+Categories=System;Settings;Security;
+Keywords=face;auth;biometric;recognition;enrollment;
+Terminal=false
+StartupNotify=true

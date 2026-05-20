@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Background -->
+  <rect width="64" height="64" rx="12" fill="#1a1a2e"/>
+  <!-- Detection corner brackets -->
+  <g stroke="#4488ff" stroke-width="3" fill="none" stroke-linecap="round">
+    <!-- Top-left -->
+    <polyline points="8,18 8,8 18,8"/>
+    <!-- Top-right -->
+    <polyline points="46,8 56,8 56,18"/>
+    <!-- Bottom-left -->
+    <polyline points="8,46 8,56 18,56"/>
+    <!-- Bottom-right -->
+    <polyline points="56,46 56,56 46,56"/>
+  </g>
+  <!-- Face outline -->
+  <ellipse cx="32" cy="30" rx="13" ry="15" stroke="#44cc88" stroke-width="2" fill="none"/>
+  <!-- Eyes -->
+  <circle cx="27" cy="26" r="2" fill="#44cc88"/>
+  <circle cx="37" cy="26" r="2" fill="#44cc88"/>
+  <!-- Nose -->
+  <line x1="32" y1="28" x2="32" y2="32" stroke="#44cc88" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Mouth -->
+  <path d="M27,36 Q32,40 37,36" stroke="#44cc88" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  <!-- Scan line -->
+  <line x1="19" y1="30" x2="45" y2="30" stroke="#4488ff" stroke-width="1" stroke-dasharray="2,2" opacity="0.6"/>
+</svg>
