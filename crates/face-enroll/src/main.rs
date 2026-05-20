@@ -1,7 +1,6 @@
 mod configure;
 mod debug_ui;
 
-use face_auth_camera;
 use face_auth_core::config::Config;
 use face_auth_core::enrollment;
 use face_auth_core::geometry::analyze_geometry;
