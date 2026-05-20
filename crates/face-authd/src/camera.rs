@@ -73,7 +73,11 @@ impl CameraHandle {
         let (tx, rx) = std::sync::mpsc::sync_channel::<Arc<Frame>>(3);
 
         if crop_w < width {
-            tracing::info!(native_width = width, crop_width = crop_w, "frame crop active");
+            tracing::info!(
+                native_width = width,
+                crop_width = crop_w,
+                "frame crop active"
+            );
         }
 
         let capture_thread = std::thread::Builder::new()

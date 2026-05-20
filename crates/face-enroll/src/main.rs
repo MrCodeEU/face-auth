@@ -1514,7 +1514,10 @@ fn cmd_enroll(username: &str, append: bool) {
     let existing_embeddings: Vec<[f32; 512]> = if append {
         match enrollment::load_embeddings(username) {
             Ok(e) => {
-                println!("Loaded {} existing embedding(s) — appending new ones.", e.len());
+                println!(
+                    "Loaded {} existing embedding(s) — appending new ones.",
+                    e.len()
+                );
                 e
             }
             Err(enrollment::EnrollmentError::NotFound(_)) => {
@@ -1866,7 +1869,10 @@ fn cmd_enroll_debug(username: &str, append: bool) {
     let existing_embeddings: Vec<[f32; 512]> = if append {
         match enrollment::load_embeddings(username) {
             Ok(e) => {
-                println!("Loaded {} existing embedding(s) — appending new ones.", e.len());
+                println!(
+                    "Loaded {} existing embedding(s) — appending new ones.",
+                    e.len()
+                );
                 e
             }
             Err(enrollment::EnrollmentError::NotFound(_)) => {
@@ -2106,4 +2112,3 @@ fn feedback_to_string(fb: &face_auth_core::protocol::FeedbackState) -> &'static 
         Authenticating => "",
     }
 }
-

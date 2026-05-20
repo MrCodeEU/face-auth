@@ -73,7 +73,11 @@ pub fn open_camera(config: &CameraConfig) -> Result<CameraHandle, String> {
 
     let crop_w = config.crop_width(width);
     if crop_w < width {
-        tracing::info!(native_width = width, crop_width = crop_w, "frame crop active");
+        tracing::info!(
+            native_width = width,
+            crop_width = crop_w,
+            "frame crop active"
+        );
     }
 
     let (tx, rx) = mpsc::sync_channel::<Arc<Frame>>(3);

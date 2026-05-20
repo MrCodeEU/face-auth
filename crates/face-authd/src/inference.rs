@@ -268,13 +268,13 @@ mod tests {
 
     #[test]
     fn liveness_and_logic() {
-        assert!(combine(true, None),          "IR only, passes");
-        assert!(combine(true, Some(true)),    "both enabled, both pass");
-        assert!(!combine(false, None),        "IR fails");
-        assert!(!combine(false, Some(true)),  "IR fails, ML passes");
-        assert!(!combine(true, Some(false)),  "IR passes, ML fails");
+        assert!(combine(true, None), "IR only, passes");
+        assert!(combine(true, Some(true)), "both enabled, both pass");
+        assert!(!combine(false, None), "IR fails");
+        assert!(!combine(false, Some(true)), "IR fails, ML passes");
+        assert!(!combine(true, Some(false)), "IR passes, ML fails");
         assert!(!combine(false, Some(false)), "both fail");
         // ML model error is treated as pass (unwrap_or(true))
-        assert!(combine(true, Some(true)),    "ML error → treated as pass");
+        assert!(combine(true, Some(true)), "ML error → treated as pass");
     }
 }

@@ -35,7 +35,9 @@ pub enum EnrollState {
         suggested_threshold: f32,
     },
     Saving,
-    Done { embed_count: usize },
+    Done {
+        embed_count: usize,
+    },
     Error(String),
 }
 
@@ -181,7 +183,10 @@ impl EnrollTab {
             pose_captured,
             all_embeddings,
             last_capture,
-        } = &mut self.state else { return };
+        } = &mut self.state
+        else {
+            return;
+        };
 
         if now.duration_since(*last_capture) < MIN_CAPTURE_INTERVAL {
             return;
@@ -222,7 +227,11 @@ impl EnrollTab {
     pub fn ui(&mut self, ui: &mut egui::Ui, ctx: &egui::Context, config: &Config) {
         self.pump_frames();
 
-        ui.heading(if self.append { "Re-enroll (append)" } else { "Enroll" });
+        ui.heading(if self.append {
+            "Re-enroll (append)"
+        } else {
+            "Enroll"
+        });
         ui.separator();
 
         // Snapshot state type to avoid borrow issues
@@ -271,9 +280,12 @@ impl EnrollTab {
             3 => {
                 // CapturingPose
                 let (pose_idx, pose_captured, total_captured) = match &self.state {
-                    EnrollState::CapturingPose { pose_idx, pose_captured, all_embeddings, .. } => {
-                        (*pose_idx, *pose_captured, all_embeddings.len())
-                    }
+                    EnrollState::CapturingPose {
+                        pose_idx,
+                        pose_captured,
+                        all_embeddings,
+                        ..
+                    } => (*pose_idx, *pose_captured, all_embeddings.len()),
                     _ => return,
                 };
 
@@ -323,31 +335,44 @@ impl EnrollTab {
             4 => {
                 // QualityReview
                 let (embeddings, avg_sim, min_sim, suggested) = match &self.state {
-                    EnrollState::QualityReview { embeddings, avg_sim, min_sim, suggested_threshold } => {
-                        (embeddings.clone(), *avg_sim, *min_sim, *suggested_threshold)
-                    }
+                    EnrollState::QualityReview {
+                        embeddings,
+                        avg_sim,
+                        min_sim,
+                        suggested_threshold,
+                    } => (embeddings.clone(), *avg_sim, *min_sim, *suggested_threshold),
                     _ => return,
                 };
                 let current_threshold = config.recognition.threshold;
 
                 ui.heading("Quality Review");
-                egui::Grid::new("quality_grid").num_columns(2).show(ui, |ui| {
-                    ui.label("Embeddings captured:");
-                    ui.label(embeddings.len().to_string());
-                    ui.end_row();
+                egui::Grid::new("quality_grid")
+                    .num_columns(2)
+                    .show(ui, |ui| {
+                        ui.label("Embeddings captured:");
+                        ui.label(embeddings.len().to_string());
+                        ui.end_row();
 
-                    ui.label("Avg inter-embedding similarity:");
-                    let grade = if avg_sim >= 0.80 { "Excellent" }
-                        else if avg_sim >= 0.70 { "Good" }
-                        else if avg_sim >= 0.60 { "Fair" }
-                        else { "Poor" };
-                    ui.label(format!("{:.3} ({})", avg_sim, grade));
-                    ui.end_row();
+                        ui.label("Avg inter-embedding similarity:");
+                        let grade = if avg_sim >= 0.80 {
+                            "Excellent"
+                        } else if avg_sim >= 0.70 {
+                            "Good"
+                        } else if avg_sim >= 0.60 {
+                            "Fair"
+                        } else {
+                            "Poor"
+                        };
+                        ui.label(format!("{:.3} ({})", avg_sim, grade));
+                        ui.end_row();
 
-                    ui.label("Suggested threshold:");
-                    ui.label(format!("{:.2}  (current: {:.2})", suggested, current_threshold));
-                    ui.end_row();
-                });
+                        ui.label("Suggested threshold:");
+                        ui.label(format!(
+                            "{:.2}  (current: {:.2})",
+                            suggested, current_threshold
+                        ));
+                        ui.end_row();
+                    });
 
                 ui.separator();
                 ui.horizontal(|ui| {
@@ -397,19 +422,29 @@ fn score_and_filter(embeddings: Vec<[f32; 512]>) -> Vec<[f32; 512]> {
         return embeddings;
     }
     let n = embeddings.len();
-    let avg_sims: Vec<f32> = (0..n).map(|i| {
-        let sum: f32 = (0..n).filter(|&j| j != i)
-            .map(|j| cosine_similarity(&embeddings[i], &embeddings[j]))
-            .sum();
-        sum / (n - 1) as f32
-    }).collect();
+    let avg_sims: Vec<f32> = (0..n)
+        .map(|i| {
+            let sum: f32 = (0..n)
+                .filter(|&j| j != i)
+                .map(|j| cosine_similarity(&embeddings[i], &embeddings[j]))
+                .sum();
+            sum / (n - 1) as f32
+        })
+        .collect();
 
-    let filtered: Vec<[f32; 512]> = embeddings.iter().copied().zip(avg_sims.iter())
+    let filtered: Vec<[f32; 512]> = embeddings
+        .iter()
+        .copied()
+        .zip(avg_sims.iter())
         .filter(|(_, &sim)| sim >= 0.5)
         .map(|(e, _)| e)
         .collect();
 
-    if filtered.is_empty() { embeddings } else { filtered }
+    if filtered.is_empty() {
+        embeddings
+    } else {
+        filtered
+    }
 }
 
 fn embedding_stats(embeddings: &[[f32; 512]]) -> (f32, f32) {
@@ -417,18 +452,24 @@ fn embedding_stats(embeddings: &[[f32; 512]]) -> (f32, f32) {
         return (0.0, 0.0);
     }
     let n = embeddings.len();
-    let avg_sim: f32 = (0..n).map(|i| {
-        let sum: f32 = (0..n).filter(|&j| j != i)
-            .map(|j| cosine_similarity(&embeddings[i], &embeddings[j]))
-            .sum();
-        sum / (n - 1) as f32
-    }).sum::<f32>() / n as f32;
+    let avg_sim: f32 = (0..n)
+        .map(|i| {
+            let sum: f32 = (0..n)
+                .filter(|&j| j != i)
+                .map(|j| cosine_similarity(&embeddings[i], &embeddings[j]))
+                .sum();
+            sum / (n - 1) as f32
+        })
+        .sum::<f32>()
+        / n as f32;
 
     let mut min_sim = 1.0f32;
     for i in 0..n {
-        for j in (i+1)..n {
+        for j in (i + 1)..n {
             let s = cosine_similarity(&embeddings[i], &embeddings[j]);
-            if s < min_sim { min_sim = s; }
+            if s < min_sim {
+                min_sim = s;
+            }
         }
     }
     (avg_sim, min_sim)

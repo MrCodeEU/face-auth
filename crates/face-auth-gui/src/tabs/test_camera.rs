@@ -10,7 +10,11 @@ pub struct TestCameraTab {
 
 impl TestCameraTab {
     pub fn new() -> Self {
-        Self { camera: None, latest_frame: None, error: None }
+        Self {
+            camera: None,
+            latest_frame: None,
+            error: None,
+        }
     }
 
     pub fn deactivate(&mut self) {

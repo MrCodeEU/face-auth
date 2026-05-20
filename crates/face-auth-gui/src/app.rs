@@ -1,6 +1,6 @@
 use crate::tabs::{
-    check_config::CheckConfigTab, configure::ConfigureTab, enroll::EnrollTab,
-    status::StatusTab, test_auth::TestAuthTab, test_camera::TestCameraTab,
+    check_config::CheckConfigTab, configure::ConfigureTab, enroll::EnrollTab, status::StatusTab,
+    test_auth::TestAuthTab, test_camera::TestCameraTab,
 };
 use face_auth_core::config::Config;
 
@@ -118,16 +118,14 @@ impl eframe::App for FaceAuthApp {
             });
         });
 
-        egui::CentralPanel::default().show_inside(ui, |ui| {
-            match self.active_tab {
-                Tab::Enroll => self.enroll_tab.ui(ui, &ctx, &self.config),
-                Tab::ReEnroll => self.re_enroll_tab.ui(ui, &ctx, &self.config),
-                Tab::Status => self.status_tab.ui(ui),
-                Tab::TestAuth => self.test_auth_tab.ui(ui, &ctx, &self.config),
-                Tab::CheckConfig => self.check_config_tab.ui(ui),
-                Tab::Configure => self.configure_tab.ui(ui, &mut self.config),
-                Tab::TestCamera => self.test_camera_tab.ui(ui, &ctx, &self.config),
-            }
+        egui::CentralPanel::default().show_inside(ui, |ui| match self.active_tab {
+            Tab::Enroll => self.enroll_tab.ui(ui, &ctx, &self.config),
+            Tab::ReEnroll => self.re_enroll_tab.ui(ui, &ctx, &self.config),
+            Tab::Status => self.status_tab.ui(ui),
+            Tab::TestAuth => self.test_auth_tab.ui(ui, &ctx, &self.config),
+            Tab::CheckConfig => self.check_config_tab.ui(ui),
+            Tab::Configure => self.configure_tab.ui(ui, &mut self.config),
+            Tab::TestCamera => self.test_camera_tab.ui(ui, &ctx, &self.config),
         });
 
         ctx.request_repaint_after(std::time::Duration::from_millis(33));

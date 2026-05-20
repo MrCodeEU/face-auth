@@ -174,21 +174,28 @@ impl TestAuthTab {
                 ctx.request_repaint_after(Duration::from_millis(100));
             }
 
-            LocalAuthState::Running { start, state_label, .. } => {
+            LocalAuthState::Running {
+                start, state_label, ..
+            } => {
                 let elapsed = start.elapsed().as_secs_f32();
                 let timeout = config.daemon.session_timeout_s as f32;
                 let progress = (elapsed / timeout).min(1.0);
 
                 ui.add(
-                    egui::ProgressBar::new(progress)
-                        .text(format!("{elapsed:.1}s / {timeout:.0}s")),
+                    egui::ProgressBar::new(progress).text(format!("{elapsed:.1}s / {timeout:.0}s")),
                 );
                 ui.separator();
 
                 ui.heading(state_label.clone());
                 if let Some(sim) = self.last_sim {
                     let color = sim_color(sim, config.recognition.threshold);
-                    ui.colored_label(color, format!("similarity: {sim:.3}  threshold: {:.2}", config.recognition.threshold));
+                    ui.colored_label(
+                        color,
+                        format!(
+                            "similarity: {sim:.3}  threshold: {:.2}",
+                            config.recognition.threshold
+                        ),
+                    );
                 }
                 ui.separator();
 
@@ -196,7 +203,12 @@ impl TestAuthTab {
                 ctx.request_repaint_after(Duration::from_millis(50));
             }
 
-            LocalAuthState::Done { outcome, color, elapsed, best_sim } => {
+            LocalAuthState::Done {
+                outcome,
+                color,
+                elapsed,
+                best_sim,
+            } => {
                 let (outcome, color, elapsed, best_sim) = (*outcome, *color, *elapsed, *best_sim);
                 ui.colored_label(color, format!("{outcome}  ({elapsed:.1}s)"));
                 if best_sim > 0.0 {
@@ -232,9 +244,12 @@ impl TestAuthTab {
         };
 
         let (consecutive, best_sim, start) = match &mut self.state {
-            LocalAuthState::Running { consecutive_matches, best_sim, start, .. } => {
-                (consecutive_matches, best_sim, *start)
-            }
+            LocalAuthState::Running {
+                consecutive_matches,
+                best_sim,
+                start,
+                ..
+            } => (consecutive_matches, best_sim, *start),
             _ => return,
         };
 
@@ -277,12 +292,16 @@ impl TestAuthTab {
 
                 if is_authenticating {
                     if let Some(emb) = fr.embedding {
-                        let sim = self.enrolled.iter()
+                        let sim = self
+                            .enrolled
+                            .iter()
                             .map(|e| cosine_similarity(&emb, e))
                             .fold(0.0f32, f32::max);
                         self.last_sim = Some(sim);
 
-                        if sim > *best_sim { *best_sim = sim; }
+                        if sim > *best_sim {
+                            *best_sim = sim;
+                        }
 
                         if sim >= config.recognition.threshold {
                             *consecutive += 1;
@@ -290,7 +309,8 @@ impl TestAuthTab {
                             *consecutive = 0;
                         }
 
-                        let effective_required = if *best_sim >= config.recognition.threshold + 0.10 {
+                        let effective_required = if *best_sim >= config.recognition.threshold + 0.10
+                        {
                             1
                         } else {
                             config.recognition.frames_required
@@ -365,7 +385,12 @@ impl TestAuthTab {
                 egui::pos2(origin.x + bbox.x1 * sx, origin.y + bbox.y1 * sy),
                 egui::pos2(origin.x + bbox.x2 * sx, origin.y + bbox.y2 * sy),
             );
-            painter.rect_stroke(r, 0.0, egui::Stroke::new(2.0, bbox_color), egui::StrokeKind::Outside);
+            painter.rect_stroke(
+                r,
+                0.0,
+                egui::Stroke::new(2.0, bbox_color),
+                egui::StrokeKind::Outside,
+            );
 
             // Confidence label above bbox
             let label = if let Some(sim) = self.last_sim {

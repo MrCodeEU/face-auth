@@ -30,10 +30,9 @@ pub struct GuiModelCache {
 
 impl GuiModelCache {
     pub fn load() -> Result<Self, String> {
-        let detector = FaceDetector::load_default()
-            .map_err(|e| format!("load detector: {e}"))?;
-        let recognizer = FaceRecognizer::load_default()
-            .map_err(|e| format!("load recognizer: {e}"))?;
+        let detector = FaceDetector::load_default().map_err(|e| format!("load detector: {e}"))?;
+        let recognizer =
+            FaceRecognizer::load_default().map_err(|e| format!("load recognizer: {e}"))?;
         Ok(Self {
             detector: Mutex::new(detector),
             recognizer: Mutex::new(recognizer),
@@ -63,7 +62,10 @@ impl InferenceWorker {
             })
             .expect("spawn gui-inference thread");
 
-        Self { result_rx, _thread: thread }
+        Self {
+            result_rx,
+            _thread: thread,
+        }
     }
 
     /// Non-blocking poll for latest result.
