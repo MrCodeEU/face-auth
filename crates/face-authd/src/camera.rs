@@ -104,6 +104,7 @@ impl Drop for CameraHandle {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn capture_loop(
     dev: Device,
     width: u32,
