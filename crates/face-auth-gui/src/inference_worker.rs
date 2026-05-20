@@ -13,11 +13,10 @@ pub struct FrameResult {
     pub metrics: FaceMetrics,
     pub embedding: Option<[f32; 512]>,
     pub liveness_pass: bool,
-    pub liveness_scores: quality::IrLivenessScores,
 }
 
 pub enum WorkerResult {
-    Face(FrameResult),
+    Face(Box<FrameResult>),
     NoFace,
 }
 
@@ -128,14 +127,13 @@ fn inference_loop(
             None
         };
 
-        let result = WorkerResult::Face(FrameResult {
+        let result = WorkerResult::Face(Box::new(FrameResult {
             bbox: det.bbox.clone(),
             landmarks: det.landmarks.clone(),
             metrics,
             embedding,
             liveness_pass,
-            liveness_scores,
-        });
+        }));
 
         let _ = result_tx.try_send(result);
     }

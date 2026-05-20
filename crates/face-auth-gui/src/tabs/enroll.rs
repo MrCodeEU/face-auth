@@ -34,6 +34,7 @@ pub enum EnrollState {
         min_sim: f32,
         suggested_threshold: f32,
     },
+    #[allow(dead_code)]
     Saving,
     Done {
         embed_count: usize,
@@ -334,7 +335,7 @@ impl EnrollTab {
             }
             4 => {
                 // QualityReview
-                let (embeddings, avg_sim, min_sim, suggested) = match &self.state {
+                let (embeddings, avg_sim, _min_sim, suggested) = match &self.state {
                     EnrollState::QualityReview {
                         embeddings,
                         avg_sim,
